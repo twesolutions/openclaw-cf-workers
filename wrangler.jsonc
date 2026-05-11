@@ -8,7 +8,10 @@
       "class_name": "OpenclawContainer",
       "image": "./Dockerfile",
       "max_instances": 1,
-      "instance_type": "standard-1",
+      "instance_type": {
+        "vcpu": 1,
+        "memory_mib": 3072
+      },
       "ssh": {
         "enabled": true
       },

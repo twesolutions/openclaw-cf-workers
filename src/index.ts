@@ -10,13 +10,16 @@ interface Env {
 
 export class OpenclawContainer extends Container<Env> {
   defaultPort = 18789;
-  sleepAfter = "15m";
   envVars = {
     R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID,
     R2_BUCKET_NAME: this.env.R2_BUCKET_NAME,
     AWS_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY,
   };
+
+  async onActivityExpired() {
+    // keep alive — do not stop the container on idle
+  }
 }
 
 const ALLOWED_IPS = new Set(["YOUR.PUBLIC.IP.HERE"]);

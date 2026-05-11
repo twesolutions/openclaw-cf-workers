@@ -97,7 +97,10 @@ Configuration written to `/root/.openclaw` inside the container is automatically
       "class_name": "OpenclawContainer",
       "image": "./Dockerfile",
       "max_instances": 1,
-      "instance_type": "standard-1",   // 1/2 vCPU, 4 GiB RAM, 8 GB disk
+      "instance_type": {       // custom type — must have ≥1 vCPU, ≥3 GiB per vCPU
+        "vcpu": 1,
+        "memory_mib": 3072
+      },
       "ssh": { "enabled": true },
       "authorized_keys": [
         { "name": "aaron", "public_key": "ssh-ed25519 AAAAC3..." }
@@ -114,6 +117,8 @@ Configuration written to `/root/.openclaw` inside the container is automatically
 
 ### Instance types
 
+Pre-set types:
+
 | Type       | vCPU  | RAM     | Disk  |
 | ---------- | ----- | ------- | ----- |
 | lite       | 1/16  | 256 MiB | 2 GB  |
@@ -121,9 +126,14 @@ Configuration written to `/root/.openclaw` inside the container is automatically
 | standard-1 | 1/2   | 4 GiB   | 8 GB  |
 | standard-2 | 1     | 6 GiB   | 12 GB |
 
-This project uses `standard-1`. The openclaw gateway requires at least `basic` (256 MiB is not enough).
+Custom types (`instance_type: { vcpu, memory_mib }`) are also supported with these constraints:
+- vCPU must be ≥ 1 (fractions like 0.5 are rejected)
+- Memory must be ≥ 3 GiB per vCPU (e.g. 1 vCPU → ≥ 3072 MiB)
+- `disk_mib` is not a valid field and is silently ignored — disk defaults to ~2 GB
 
-### Worker code pattern (with envVars)
+This project uses a custom type: 1 vCPU, 3 GiB RAM. The openclaw gateway requires at least `basic` (256 MiB is not enough).
+
+### Worker code pattern (with envVars and keep-alive)
 
 ```ts
 import { Container, getContainer } from "@cloudflare/containers";
@@ -144,10 +154,16 @@ export class OpenclawContainer extends Container<Env> {
     AWS_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY,
   };
+
+  async onActivityExpired() {
+    // keep alive — do not stop the container on idle
+  }
 }
 ```
 
 `envVars` is a class field (not a getter) initialized after `super()`, so `this.env` is available.
+
+`onActivityExpired()` is normally called when the `sleepAfter` inactivity timeout expires, and by default calls `this.stop()`. Overriding it with an empty body keeps the container running indefinitely. This is the Containers equivalent of `keepAlive: true` in the Cloudflare Sandboxes product (different API — don't confuse the two). Call `this.stop()` or `this.destroy()` explicitly when you need to shut down.
 
 ## R2 Persistent Storage
 
@@ -200,7 +216,7 @@ npx wrangler containers ssh <INSTANCE_ID>
 
 The user inside the container is `root`.
 
-## Pricing (standard-1, lightly used)
+## Pricing (custom 1 vCPU / 3 GiB, always-on)
 
 Based on Workers Paid plan ($5/month required):
 
@@ -210,12 +226,12 @@ Based on Workers Paid plan ($5/month required):
 | vCPU | 375 vCPU-minutes/month | $0.000020/vCPU-second |
 | Disk | 200 GB-hours/month | $0.00000007/GB-second |
 
-For a lightly used openclaw instance (container sleeps between requests):
-- Memory (4 GiB) is the main cost driver: ~$0.036/hour after the free 6 hours
-- vCPU only billed on actual compute — stays within free tier for light use
-- **Estimated: ~$6–7/month total** for typical light Telegram/AI usage
+This project uses `onActivityExpired()` to keep the container alive indefinitely (no sleeping). Cost runs continuously:
+- Memory (3 GiB) at ~$0.027/hour after free tier (~9 free hours/month)
+- vCPU (1 core) at ~$1.20/hour — but only billed during actual compute, not idle; stays within free tier for light use
+- **Estimated: ~$15–20/month** always-on at 3 GiB RAM
 
-Containers stop accruing charges when sleeping. The `sleepAfter` timeout controls how quickly idle containers sleep.
+To re-enable sleep (cheaper), remove `onActivityExpired()` and add `sleepAfter = "15m"` to the class. Memory is only billed while awake.
 
 ## Deployment Notes
 
@@ -238,7 +254,7 @@ The 28-second timeout is the signature of a container that never passes its star
 - `portReadyTimeoutMS` = 20s (time for the port to start accepting connections)
 - Total = 28s → 503 "There is no Container instance available at this time"
 
-**Most likely cause: OOM kill.** The default `instance_type: "lite"` has only 256 MiB RAM. Fix: use `"instance_type": "basic"` or higher.
+**Most likely cause: OOM kill.** The default `instance_type: "lite"` has only 256 MiB RAM. Fix: use `"instance_type": "basic"` or higher, or a custom type with at least 1 GiB.
 
 **Other causes to rule out:**
 1. **Architecture mismatch** — Cloudflare runs `linux/amd64`. Verify Dockerfile has `FROM --platform=linux/amd64 ...`.

@@ -102,7 +102,10 @@ Edit `wrangler.jsonc` and fill in your values:
       "class_name": "OpenclawContainer",
       "image": "./Dockerfile",
       "max_instances": 1,
-      "instance_type": "standard-1",
+      "instance_type": {
+        "vcpu": 1,
+        "memory_mib": 3072
+      },
       "ssh": { "enabled": true },
       "authorized_keys": [
         {
@@ -135,12 +138,19 @@ Edit `wrangler.jsonc` and fill in your values:
 
 ### Instance types
 
+Pre-set types:
+
 | Type | vCPU | RAM | Disk | Notes |
 |---|---|---|---|---|
 | lite | 1/16 | 256 MiB | 2 GB | Too small for openclaw |
 | basic | 1/4 | 1 GiB | 4 GB | Minimum for openclaw |
-| standard-1 | 1/2 | 4 GiB | 8 GB | Recommended |
+| standard-1 | 1/2 | 4 GiB | 8 GB | |
 | standard-2 | 1 | 6 GiB | 12 GB | |
+
+Custom types are also supported using `instance_type: { vcpu, memory_mib }`. Constraints:
+- `vcpu` must be ≥ 1 (fractions like 0.5 are rejected)
+- `memory_mib` must be ≥ 3072 per vCPU (3 GiB minimum for 1 vCPU)
+- `disk_mib` is not a recognized field — omit it (disk defaults to ~2 GB)
 
 ---
 
@@ -272,23 +282,21 @@ Configuration is written to `~/.openclaw` which is mounted from R2 — it persis
 
 ---
 
-## Idle Sleep
+## Keep-Alive (always-on)
 
-The container sleeps after a period of inactivity to reduce billing. Controlled by `sleepAfter` in `src/index.ts`:
+The container is configured to run indefinitely. `onActivityExpired()` in `src/index.ts` is overridden with an empty body, which prevents the default shutdown behaviour when the inactivity timer fires:
 
 ```ts
-export class OpenclawContainer extends Container<Env> {
-  defaultPort = 18789;
-  sleepAfter = "15m";   // adjust as needed
-  ...
+async onActivityExpired() {
+  // keep alive — do not stop the container on idle
 }
 ```
 
-Any incoming request (Telegram webhook, browser visit, API call) wakes the container automatically. Cold starts take ~10-15s.
+To re-enable sleep (cheaper), remove this override and add `sleepAfter = "15m"` to the class. Any incoming request wakes the container automatically; cold starts take ~10-15s.
 
 ---
 
-## Pricing (standard-1, light usage)
+## Pricing (custom 1 vCPU / 3 GiB, always-on)
 
 Requires Workers Paid plan ($5/month base).
 
@@ -298,7 +306,7 @@ Requires Workers Paid plan ($5/month base).
 | vCPU | 375 vCPU-minutes | $0.000020/vCPU-second |
 | Disk | 200 GB-hours | $0.00000007/GB-second |
 
-**Estimated: ~$6-7/month** for light Telegram/AI usage. Memory (4 GiB) is the main cost driver — only billed while the container is awake.
+Because the container never sleeps, memory accrues continuously. **Estimated: ~$15-20/month** always-on at 3 GiB RAM. vCPU cost only accrues during active compute and typically stays within the free tier for light usage.
 
 ---
 
