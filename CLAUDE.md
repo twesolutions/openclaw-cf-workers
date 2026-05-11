@@ -87,6 +87,8 @@ The container runs `startup.sh` on start:
 
 Configuration written to `/root/.openclaw` inside the container is automatically persisted to R2 and survives restarts and redeployments.
 
+**Exception — `/root/.openclaw/plugin-skills/`:** R2 is object storage and cannot represent POSIX symlinks. tigrisfs silently turns each `symlink()` write into a zero-byte regular file, which then causes openclaw's `readlink()` calls to fail with `EINVAL: invalid argument` and plugins to refuse to load. `startup.sh` works around this by bind-mounting a local ephemeral directory (`/var/lib/openclaw-plugin-skills`) over `/root/.openclaw/plugin-skills`, so symlinks work normally. The directory is ephemeral, but openclaw rebuilds the symlinks from the persistent `plugins/` directory on startup, so this is fine. **Do not add any other path under `~/.openclaw` that openclaw expects to contain symlinks without applying the same bind-mount treatment.**
+
 ### Configuration (`wrangler.jsonc`)
 
 ```jsonc
