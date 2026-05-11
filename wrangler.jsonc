@@ -18,8 +18,8 @@
       },
       "authorized_keys": [
         {
-          "name": "aaron",
-          "public_key": "ssh-ed25519 AAAA...replace-with-your-public-key you@example.com"
+          "name": "your-name",
+          "public_key": "ssh-ed25519 AAAA... replace with your ~/.ssh/id_ed25519.pub"
         }
       ]
     }

@@ -1,14 +1,22 @@
 {
   "name": "openclaw-cf-workers",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Cloudflare Worker that runs the openclaw gateway in a Cloudflare Container, with R2-backed config persistence (via tigrisfs) and SSH access.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "cloudflare",
+    "cloudflare-workers",
+    "cloudflare-containers",
+    "durable-objects",
+    "r2",
+    "tigrisfs",
+    "openclaw"
+  ],
+  "author": "Aaron Faby",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@cloudflare/containers": "^0.3.3",

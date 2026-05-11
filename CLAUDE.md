@@ -19,9 +19,9 @@ The container runs the openclaw gateway (`ghcr.io/openclaw/openclaw:latest`) wit
 
 ## Deployed URLs
 
-- **Worker**: https://openclaw.your-account-subdomain.workers.dev
-- **Account subdomain**: `your-account-subdomain` (used to construct `*.your-account-subdomain.workers.dev`)
-- **Cloudflare account ID**: `your-cloudflare-account-id`
+After `npx wrangler deploy`, the Worker is published at `https://<worker-name>.<account-subdomain>.workers.dev` (the URL is printed at the end of the deploy output). The Worker name comes from the `name` field in `wrangler.jsonc` (default: `openclaw`). The account subdomain is shown in the Cloudflare dashboard under Workers & Pages → Overview, and is also part of the deploy output.
+
+The Cloudflare account ID is the value of `R2_ACCOUNT_ID` in `wrangler.jsonc`. Find it in the Cloudflare dashboard sidebar (Workers & Pages → Overview, right rail).
 
 ## Common Commands
 
@@ -35,8 +35,8 @@ npx wrangler deploy
 # Check container state (running/healthy/degraded/provisioning)
 npx wrangler containers list
 
-# List running instances and get instance IDs
-npx wrangler containers instances APPLICATION_ID_PLACEHOLDER
+# List running instances and get instance IDs (application ID from `containers list`)
+npx wrangler containers instances <APPLICATION_ID>
 
 # SSH into a running container instance
 npx wrangler containers ssh <INSTANCE_ID>
@@ -48,7 +48,7 @@ npx wrangler containers ssh <INSTANCE_ID> -- <command>
 npx wrangler tail --format=pretty
 
 # Hit the worker to verify it's up (cold start takes ~10-15s with R2 mount)
-curl -m 35 -w "\nHTTP %{http_code} in %{time_total}s\n" https://openclaw.your-account-subdomain.workers.dev/
+curl -m 35 -w "\nHTTP %{http_code} in %{time_total}s\n" https://<worker-name>.<account-subdomain>.workers.dev/
 
 # List R2 buckets
 npx wrangler r2 bucket list
@@ -78,7 +78,7 @@ The Worker enforces an IP allowlist before forwarding any request to the contain
 const ALLOWED_IPS = new Set(["YOUR.PUBLIC.IP.HERE"]);
 ```
 
-To add or remove IPs, edit `ALLOWED_IPS` and run `npx wrangler deploy`. The `CF-Connecting-IP` header is set by Cloudflare and cannot be spoofed by callers.
+To add or remove IPs, edit `ALLOWED_IPS` and run `npx wrangler deploy`. The `CF-Connecting-IP` header is set by Cloudflare and cannot be spoofed by callers. Find your public IP with `curl ifconfig.me`.
 
 ## Architecture
 
@@ -116,7 +116,7 @@ Configuration written to `/root/.openclaw` inside the container is automatically
       },
       "ssh": { "enabled": true },
       "authorized_keys": [
-        { "name": "aaron", "public_key": "ssh-ed25519 AAAAC3..." }
+        { "name": "your-name", "public_key": "ssh-ed25519 AAAA..." }
       ]
     }
   ],

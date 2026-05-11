@@ -22,6 +22,8 @@ export class OpenclawContainerV2 extends Container<Env> {
   }
 }
 
+// Edit this set before deploying. Cloudflare sets CF-Connecting-IP server-side
+// so it cannot be spoofed by callers. Find your public IP with `curl ifconfig.me`.
 const ALLOWED_IPS = new Set(["YOUR.PUBLIC.IP.HERE"]);
 
 export default {

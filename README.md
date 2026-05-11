@@ -1,5 +1,7 @@
 # openclaw on Cloudflare Containers
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 Runs the [openclaw](https://github.com/openclaw/openclaw) gateway inside a Cloudflare Container — a Docker container managed by a Cloudflare Worker and backed by a Durable Object. Configuration is persisted to an R2 bucket via FUSE mount so it survives container restarts.
 
 ## Architecture
@@ -104,7 +106,8 @@ Edit `wrangler.jsonc` and fill in your values:
       "max_instances": 1,
       "instance_type": {
         "vcpu": 1,
-        "memory_mib": 3072
+        "memory_mib": 3072,
+        "disk_mb": 6000
       },
       "ssh": { "enabled": true },
       "authorized_keys": [
@@ -147,10 +150,10 @@ Pre-set types:
 | standard-1 | 1/2 | 4 GiB | 8 GB | |
 | standard-2 | 1 | 6 GiB | 12 GB | |
 
-Custom types are also supported using `instance_type: { vcpu, memory_mib }`. Constraints:
+Custom types are also supported using `instance_type: { vcpu, memory_mib, disk_mb }`. Constraints:
 - `vcpu` must be ≥ 1 (fractions like 0.5 are rejected)
 - `memory_mib` must be ≥ 3072 per vCPU (3 GiB minimum for 1 vCPU)
-- `disk_mib` is not a recognized field — omit it (disk defaults to ~2 GB)
+- `disk_mb` (note: `_mb`, not `_mib`) sets disk size. Omit it and disk defaults to ~2 GB. The variant `disk_mib` is silently ignored.
 
 ---
 
@@ -282,6 +285,32 @@ Configuration is written to `~/.openclaw` which is mounted from R2 — it persis
 
 ---
 
+## Operations
+
+### Restarting the container
+
+There is no clean in-container restart. `kill -9 1` is filtered by the kernel (PID 1 in a PID namespace ignores unhandled signals, and SIGKILL cannot be handled). `pkill -9 openclaw` only triggers Cloudflare's `cc-vm-agent` supervisor to respawn the process inside the same VM — it does **not** refresh the R2 mount or the ephemeral plugin-skills disk.
+
+To force a full container restart, change the image SHA and redeploy:
+
+```bash
+docker builder prune -f && npx wrangler deploy
+```
+
+The instance ID is deterministic from the DO namespace, so it does not change across restarts.
+
+### ⚠️ Never delete and recreate the container with the same DO class name
+
+If you run `wrangler containers delete <ID>` and then `wrangler deploy` to recreate, `wrangler containers ssh` will fail forever with `Instance <ID> not found`. Cloudflare's SSH proxy caches a mapping from the (deterministic) Durable Object ID to the deployment UUID and does not invalidate it. **Updates via `wrangler deploy` over an existing app are safe** — only `delete`-then-`create` triggers this.
+
+Recovery requires renaming the DO class (e.g. `OpenclawContainer` → `OpenclawContainerV2`), updating the binding and migration in `wrangler.jsonc`, deleting the whole Worker (`npx wrangler delete --name openclaw`), redeploying, and re-adding Worker secrets (which the delete wipes). R2-backed config in `~/.openclaw` survives all of this.
+
+### Plugin-skills directory uses ephemeral disk
+
+R2 object storage cannot represent POSIX symlinks. tigrisfs silently writes them as zero-byte files, which then break openclaw's `readlink()` calls. `startup.sh` bind-mounts a local ephemeral directory over `/root/.openclaw/plugin-skills` so symlinks work. openclaw rebuilds the symlinks from the persistent `plugins/` directory on each startup, so this is fine — but do not add any other path under `~/.openclaw` that needs symlinks without applying the same treatment.
+
+---
+
 ## Keep-Alive (always-on)
 
 The container is configured to run indefinitely. `onActivityExpired()` in `src/index.ts` is overridden with an empty body, which prevents the default shutdown behaviour when the inactivity timer fires:
@@ -344,3 +373,9 @@ npx wrangler secret put R2_ACCESS_KEY_ID
 npx wrangler secret put R2_SECRET_ACCESS_KEY
 npx wrangler deploy
 ```
+
+---
+
+## License
+
+[MIT](./LICENSE)
