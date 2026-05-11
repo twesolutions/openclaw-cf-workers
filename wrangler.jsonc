@@ -8,7 +8,16 @@
       "class_name": "OpenclawContainer",
       "image": "./Dockerfile",
       "max_instances": 1,
-      "instance_type": "basic"
+      "instance_type": "basic",
+      "ssh": {
+        "enabled": true
+      },
+      "authorized_keys": [
+        {
+          "name": "aaron",
+          "public_key": "ssh-ed25519 AAAA...replace-with-your-public-key you@example.com"
+        }
+      ]
     }
   ],
   "durable_objects": {
@@ -21,5 +30,9 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "R2_ACCOUNT_ID": "your-cloudflare-account-id",
+    "R2_BUCKET_NAME": "openclaw-data"
   }
 }

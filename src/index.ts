@@ -1,7 +1,21 @@
 import { Container, getContainer } from "@cloudflare/containers";
 
-export class OpenclawContainer extends Container {
+interface Env {
+  OPENCLAW_CONTAINER: DurableObjectNamespace;
+  R2_ACCOUNT_ID: string;
+  R2_BUCKET_NAME: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+}
+
+export class OpenclawContainer extends Container<Env> {
   defaultPort = 18789;
+  envVars = {
+    R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID,
+    R2_BUCKET_NAME: this.env.R2_BUCKET_NAME,
+    AWS_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY,
+  };
 }
 
 export default {
