@@ -8,7 +8,7 @@
       "class_name": "OpenclawContainer",
       "image": "./Dockerfile",
       "max_instances": 1,
-      "instance_type": "basic",
+      "instance_type": "standard-1",
       "ssh": {
         "enabled": true
       },
