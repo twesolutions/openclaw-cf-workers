@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openclaw",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-10",
+  "containers": [
+    {
+      "class_name": "OpenclawContainer",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "class_name": "OpenclawContainer", "name": "OPENCLAW_CONTAINER" }
+    ]
+  },
+  "migrations": [
+    { "new_sqlite_classes": ["OpenclawContainer"], "tag": "v1" }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
