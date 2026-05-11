@@ -5,7 +5,7 @@
   "compatibility_date": "2025-05-10",
   "containers": [
     {
-      "class_name": "OpenclawContainer",
+      "class_name": "OpenclawContainerV2",
       "image": "./Dockerfile",
       "max_instances": 1,
       "instance_type": {
@@ -26,11 +26,11 @@
   ],
   "durable_objects": {
     "bindings": [
-      { "class_name": "OpenclawContainer", "name": "OPENCLAW_CONTAINER" }
+      { "class_name": "OpenclawContainerV2", "name": "OPENCLAW_CONTAINER" }
     ]
   },
   "migrations": [
-    { "new_sqlite_classes": ["OpenclawContainer"], "tag": "v1" }
+    { "new_sqlite_classes": ["OpenclawContainerV2"], "tag": "v1" }
   ],
   "observability": {
     "enabled": true

@@ -53,8 +53,9 @@ curl -m 35 -w "\nHTTP %{http_code} in %{time_total}s\n" https://openclaw.your-ac
 # List R2 buckets
 npx wrangler r2 bucket list
 
-# Force container restart (kills PID 1 / init)
-npx wrangler containers ssh <INSTANCE_ID> -- kill -TERM 1
+# Force container restart — must be SIGKILL because PID 1 is systemd,
+# which traps SIGTERM and runs a graceful shutdown instead of exiting.
+npx wrangler containers ssh <INSTANCE_ID> -- kill -9 1
 ```
 
 ## Security
@@ -215,6 +216,21 @@ npx wrangler containers ssh <INSTANCE_ID>
 ```
 
 The user inside the container is `root`.
+
+### Critical gotcha: never delete and recreate with the same DO class name
+
+If you `wrangler containers delete <ID>` and then `wrangler deploy` to recreate, `wrangler containers ssh` will fail forever with `Instance <ID> not found` (the Cloudflare API returns `DEPLOYMENT_NOT_FOUND` from `GET /containers/instances/{DO_ID}/ssh`). Updates (`wrangler deploy` over an existing app) are fine — only delete-then-create triggers this. To restart the container without losing SSH, push any Dockerfile change instead of deleting.
+
+**Root cause:** The instance ID shown by `wrangler containers instances` is the Durable Object ID, which is deterministic from the DO namespace (one namespace per `class_name` per Worker). Cloudflare's SSH proxy backend caches a mapping from DO ID → deployment UUID and **does not invalidate it when the application is deleted**. Recreating the app with the same DO class produces the same DO ID, which still resolves to the now-dead deployment.
+
+**Recovery** (if it has already broken):
+
+1. Rename the DO class in `src/index.ts` (e.g. `OpenclawContainerV2`).
+2. Update `class_name` in the binding *and* the migrations in `wrangler.jsonc`. The cleanest recovery is to delete the whole Worker (`npx wrangler delete --name openclaw`) and redeploy — that lets you collapse migrations to a single `new_sqlite_classes` entry for the new class. A `deleted_classes` migration against a live binding fails with `code 10061`.
+3. `npx wrangler deploy` — note the new `namespace_id` in the diff (should differ from the old one), confirming a fresh DO namespace.
+4. **Re-add Worker secrets.** `wrangler delete --name openclaw` also wipes all Worker secrets, so `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` will be missing from the new deployment. The container will start with `AWS_ACCESS_KEY_ID=undefined`, tigrisfs will fail to authenticate, and `/root/.openclaw` will be backed by ephemeral disk instead of R2. After running both `wrangler secret put` commands, force a container restart with `kill -9 1` (above) so the new envVars are picked up — the running container does not re-read secrets in place.
+
+R2-backed config (`~/.openclaw`) survives all of this since it lives in the `openclaw-data` bucket, not in the DO or the Worker.
 
 ## Pricing (custom 1 vCPU / 3 GiB, always-on)
 

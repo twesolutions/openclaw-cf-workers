@@ -8,7 +8,7 @@ interface Env {
   R2_SECRET_ACCESS_KEY: string;
 }
 
-export class OpenclawContainer extends Container<Env> {
+export class OpenclawContainerV2 extends Container<Env> {
   defaultPort = 18789;
   envVars = {
     R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID,
