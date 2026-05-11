@@ -1,5 +1,7 @@
 FROM --platform=linux/amd64 ghcr.io/openclaw/openclaw:latest
 
+USER root
+
 # Install FUSE libraries and tigrisfs for R2 persistent storage
 RUN if command -v apt-get >/dev/null 2>&1; then \
       apt-get update -qq && apt-get install -y --no-install-recommends fuse ca-certificates curl && rm -rf /var/lib/apt/lists/*; \
@@ -13,5 +15,6 @@ RUN if command -v apt-get >/dev/null 2>&1; then \
     chmod +x /usr/local/bin/tigrisfs
 
 COPY startup.sh /startup.sh
+RUN chmod +x /startup.sh
 EXPOSE 18789
 CMD ["/startup.sh"]
