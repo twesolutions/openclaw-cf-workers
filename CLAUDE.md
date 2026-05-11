@@ -57,11 +57,23 @@ npx wrangler r2 bucket list
 npx wrangler containers ssh <INSTANCE_ID> -- kill -TERM 1
 ```
 
+## Security
+
+### IP Allowlist
+
+The Worker enforces an IP allowlist before forwarding any request to the container. Requests from unlisted IPs receive HTTP 403. The allowlist is a `Set` in `src/index.ts`:
+
+```ts
+const ALLOWED_IPS = new Set(["YOUR.PUBLIC.IP.HERE"]);
+```
+
+To add or remove IPs, edit `ALLOWED_IPS` and run `npx wrangler deploy`. The `CF-Connecting-IP` header is set by Cloudflare and cannot be spoofed by callers.
+
 ## Architecture
 
 Cloudflare Containers has two layers:
 
-1. **Worker** (`src/index.ts`) — handles incoming HTTP requests and routes them to container instances using `getContainer()` from `@cloudflare/containers`.
+1. **Worker** (`src/index.ts`) — handles incoming HTTP requests, enforces the IP allowlist, and routes allowed requests to container instances using `getContainer()` from `@cloudflare/containers`.
 2. **Container class** (`OpenclawContainer`) — extends `Container` from `@cloudflare/containers`, backed by a Durable Object. Sets `envVars` to forward R2 credentials into the container process.
 
 ### Startup sequence

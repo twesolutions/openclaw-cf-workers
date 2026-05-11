@@ -19,8 +19,14 @@ export class OpenclawContainer extends Container<Env> {
   };
 }
 
+const ALLOWED_IPS = new Set(["YOUR.PUBLIC.IP.HERE"]);
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const ip = request.headers.get("CF-Connecting-IP") ?? "";
+    if (!ALLOWED_IPS.has(ip)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     const container = getContainer(env.OPENCLAW_CONTAINER);
     return container.fetch(request);
   },

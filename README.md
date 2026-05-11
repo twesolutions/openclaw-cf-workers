@@ -206,7 +206,25 @@ Edit `~/.docker/config.json` and set:
 
 ---
 
-## Step 8 — Deploy
+## Step 8 — Configure IP allowlist
+
+The Worker restricts access to a set of allowed source IPs. Edit `src/index.ts` and add your public IP:
+
+```ts
+const ALLOWED_IPS = new Set(["your.public.ip.here"]);
+```
+
+Requests from any other IP receive HTTP 403. Cloudflare sets the `CF-Connecting-IP` header server-side, so it cannot be spoofed. To find your public IP:
+
+```bash
+curl -s https://ifconfig.me
+```
+
+To add more IPs later, append them to the set and redeploy.
+
+---
+
+## Step 9 — Deploy
 
 Make sure Docker is running, then:
 
@@ -220,7 +238,7 @@ After deploying, wait **2-3 minutes** for the container to be provisioned before
 
 ---
 
-## Step 9 — Verify
+## Step 10 — Verify
 
 ```bash
 # Check container is running
@@ -232,7 +250,7 @@ curl -m 35 -w "\nHTTP %{http_code} in %{time_total}s\n" https://<your-worker>.wo
 
 ---
 
-## Step 10 — Configure openclaw
+## Step 11 — Configure openclaw
 
 SSH into the running container and run the setup wizard:
 
