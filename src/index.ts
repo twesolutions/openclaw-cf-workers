@@ -10,6 +10,7 @@ interface Env {
 
 export class OpenclawContainer extends Container<Env> {
   defaultPort = 18789;
+  sleepAfter = "15m";
   envVars = {
     R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID,
     R2_BUCKET_NAME: this.env.R2_BUCKET_NAME,
