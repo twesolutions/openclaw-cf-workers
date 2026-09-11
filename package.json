@@ -20,7 +20,9 @@
   "type": "commonjs",
   "devDependencies": {
     "@cloudflare/containers": "^0.3.3",
-    "@cloudflare/workers-types": "^4.20260510.1",
-    "wrangler": "^4.90.0"
+    "@cloudflare/workers-types": "^5.20260911.1",
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.131.0"
   }
 }
