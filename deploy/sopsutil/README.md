@@ -5,6 +5,7 @@ This additive deployment leaves the original template and existing Cloudflare SO
 - Worker `sopsutil-openclaw-dev`, account `6eef883dec740547667d5a2522924a3b`.
 - One named Durable Object, `sopsutil-development`, class `SopsutilContainer`.
 - Official OpenClaw 2026.9.3 amd64 Docker Hub image pinned by digest.
+- GitHub CLI 2.100.0 is installed into `/home/node/.local/bin` before Gateway startup and added to inherited PATH. The official Linux amd64 release archive is verified against its published checksum; its extracted binary is stored privately at `bootstrap/gh-2.100.0-linux-amd64` and SHA-256 checked by the runtime on every cold start. This keeps the executable outside state archives and restores it after ephemeral disk loss. No GitHub authentication is bundled. Missing/corrupt binary prevents startup; upload and verify it before deploying this runtime.
 - `standard-2`: 1 vCPU, 6 GiB memory, 12 GB ephemeral disk.
 - Source ingress restricted to the approved datacenter `63.251.196.0/24`; Gateway password authentication and browser device pairing remain enabled. The Worker replaces forwarded-client headers; Gateway trusts only the observed container ingress peer `10.1.0.0` in addition to any previously configured proxies.
 - Private R2 bucket `sopsutil-openclaw-dev-data`. No public bucket or custom domain.

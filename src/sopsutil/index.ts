@@ -21,8 +21,8 @@ export class SopsutilContainer extends Container<Env>{
 SopsutilContainer.outboundByHost={
  'sopsutil-storage.internal':async(request,env:Env)=>{
   const path=new URL(request.url).pathname;
-  if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup')){
-   const key=path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
+  if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup'||path==='/gh')){
+   const key=path==='/gh'?'bootstrap/gh-2.100.0-linux-amd64':path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
    const object=await env.SOPSUTIL_DATA.get(key);return object?new Response(object.body,{headers:{'Cache-Control':'no-store'}}):new Response('Missing',{status:404});
   }
   if(path==='/backup'&&request.method==='PUT'){

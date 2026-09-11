@@ -1,10 +1,12 @@
 import {spawn} from 'node:child_process';
-import {mkdir,readFile,writeFile,readdir,rename,rm,stat} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,readdir,rename,rm,stat,chmod} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {join,resolve} from 'node:path';
 const root='/home/node/.openclaw';
 const storage='http://sopsutil-storage.internal';
 const cli='/app/openclaw.mjs';
+let ghVersion=null;
 let gateway, checkpointing=false, lastBackup=null, failure=null, shuttingDown=false;
 function run(args){return new Promise((res,rej)=>{const child=spawn('node',[cli,...args],{stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',b=>{output+=b;if(output.length>4e6)child.kill();});child.stderr.resume();child.on('error',rej);child.on('close',code=>code===0?res(output):rej(new Error('cli_failed_'+args[0]+'_'+code)));});}
 async function request(path,init){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(240000)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
@@ -34,7 +36,19 @@ async function checkpoint(){
   console.log('checkpoint_uploaded');return {ok:true,lastBackup};
  }catch(e){failure=e.message;throw e;}finally{checkpointing=false;}
 }
+async function installGitHubCli(){
+ // Verified official release binary, delivered via the private Worker binding.
+ // Reinstall outside the archived state on every cold start; never copy auth.
+ const response=await request('/gh');if(response.status===404)throw new Error('github_cli_missing');
+ const binary=Buffer.from(await response.arrayBuffer());
+ if(createHash('sha256').update(binary).digest('hex')!=='553949e2efa12842771efe6012aa4de21f1d591530ec17fc435f610f10e017ee')throw new Error('github_cli_checksum');
+ const bin='/home/node/.local/bin';await mkdir(bin,{recursive:true});
+ await writeFile(join(bin,'gh'),binary,{mode:0o755});await chmod(join(bin,'gh'),0o755);
+ process.env.PATH=bin+':'+(process.env.PATH??'/usr/local/bin:/usr/bin:/bin');
+ ghVersion=await new Promise((res,rej)=>{const child=spawn('gh',['--version'],{stdio:['ignore','pipe','ignore']});let output='';child.stdout.on('data',b=>output+=b);child.on('error',rej);child.on('close',code=>code===0?res(output.split('\n')[0]):rej(new Error('github_cli_version_failed')));});
+}
 async function main(){
+ await installGitHubCli();
  await restore();await mkdir(root,{recursive:true,mode:0o700});
  const seedResponse=await request('/seed');if(seedResponse.status===404)throw new Error('seed_missing');
  const seed=await seedResponse.json();const workspace=join(root,'workspace-sopsutil');await mkdir(workspace,{recursive:true,mode:0o700});
@@ -59,7 +73,7 @@ async function main(){
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
   try{
-   if(req.url==='/status'&&req.method==='GET'){res.end(JSON.stringify({ok:true,lastBackup,failure,checkpointing,proxyPeer:req.socket.remoteAddress}));return;}
+   if(req.url==='/status'&&req.method==='GET'){res.end(JSON.stringify({ok:true,lastBackup,failure,checkpointing,ghVersion,proxyPeer:req.socket.remoteAddress}));return;}
    if(req.url==='/checkpoint'&&req.method==='POST'){res.end(JSON.stringify(await checkpoint()));return;}
    if(req.url==='/devices'&&req.method==='GET'){res.end(await run(['devices','list','--json']));return;}
    res.statusCode=404;res.end('{}');
