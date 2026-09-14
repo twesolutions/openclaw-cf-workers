@@ -50,22 +50,6 @@ async function installGitHubCli(){
 async function main(){
  await installGitHubCli();
  await restore();await mkdir(root,{recursive:true,mode:0o700});
- const pluginDir=join(root,'extensions','msteams');
- try{await stat(join(pluginDir,'openclaw.plugin.json'));}catch(e){
-  if(e.code!=='ENOENT')throw e;
-  const response=await request('/msteams');if(response.status===404)throw new Error('msteams_package_missing');
-  const packageBytes=Buffer.from(await response.arrayBuffer());
-  if(createHash('sha256').update(packageBytes).digest('hex')!=='3226c7907ce7dc139d365b87bfbe17cb6ee8cd356dbb5afce765a78fc75fa998')throw new Error('msteams_package_checksum');
-  const packagePath='/home/node/openclaw-msteams-2026.9.3.tgz';await writeFile(packagePath,packageBytes,{mode:0o600});
-  await run(['plugins','install','npm-pack:'+packagePath,'--force','--pin']);await rm(packagePath);
- }
- // Import the dedicated Teams certificate from a runtime-only secret. The PEM
- // never enters Worker source, configuration JSON, logs, or the R2 seed.
- const teamsCert=process.env.SOPSUTIL_TEAMS_CERTIFICATE_B64;
- if(teamsCert){
-  const certDir=join(root,'certs','sopsutil-teams');await mkdir(certDir,{recursive:true,mode:0o700});
-  await writeFile(join(certDir,'bot.pem'),Buffer.from(teamsCert,'base64'),{mode:0o600});
- }
  const seedResponse=await request('/seed');if(seedResponse.status===404)throw new Error('seed_missing');
  const seed=await seedResponse.json();const workspace=join(root,'workspace-sopsutil');await mkdir(workspace,{recursive:true,mode:0o700});
  for(const [name,content]of Object.entries(seed)){
@@ -84,12 +68,7 @@ async function main(){
  const configPath=join(root,'openclaw.json');let config={};try{config=JSON.parse(await readFile(configPath,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
  config.gateway={...config.gateway,mode:'local',port:18789,bind:'lan',trustedProxies:[...new Set([...(config.gateway?.trustedProxies??[]),'10.1.0.0'])],auth:{mode:'password',password:{source:'env',provider:'default',id:'OPENCLAW_GATEWAY_PASSWORD'}},controlUi:{...config.gateway?.controlUi,allowedOrigins:[process.env.PUBLIC_ORIGIN]}};
  config.agents??={};config.agents.defaults={...config.agents.defaults,workspace};
- config.agents.entries??={};
- config.agents.entries['sopsutil-teams']={...(config.agents.entries['sopsutil-teams']??{}),name:'SopsUtil Teams',workspace,tools:{...(config.agents.entries['sopsutil-teams']?.tools??{}),deny:[...new Set([...(config.agents.entries['sopsutil-teams']?.tools?.deny??[]),'message'])]}};
  config.agents.list??=[{id:'sopsutil',name:'SopsUtil Cloudflare',default:true,workspace}];
- config.channels??={};
- config.channels.msteams={...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:['80da54cc-a71c-4e9b-a4dd-e863432ba349'],groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},webhook:{port:3978,path:'/api/messages'}};
- config.bindings=[...(config.bindings??[]).filter(b=>!(b?.match?.channel==='msteams')),{type:'route',agentId:'sopsutil-teams',comment:'Route only Teams to a dedicated SopsUtil agent with proactive message tooling denied',match:{channel:'msteams',accountId:'*'},session:{dmScope:'per-account-channel-peer'}}];
  await writeFile(configPath,JSON.stringify(config,null,2),{mode:0o600});await run(['config','validate']);
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
