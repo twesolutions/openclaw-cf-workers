@@ -1,14 +1,14 @@
-import {Container,getContainer,ContainerProxy} from '@cloudflare/containers';
+import {Container,getContainer,ContainerProxy,switchPort} from '@cloudflare/containers';
 import runtime from './runtime.mjs';
 export {ContainerProxy};
-interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;}
+interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
  requiredPorts=[18789,18790];
  pingEndpoint='localhost/healthz';
  sleepAfter='15m';
  entrypoint=['node','--input-type=module','-e',runtime];
- envVars={PUBLIC_ORIGIN:this.env.PUBLIC_ORIGIN,OPENCLAW_GATEWAY_PASSWORD:this.env.SOPSUTIL_CF_GATEWAY_PASSWORD??''};
+ envVars={PUBLIC_ORIGIN:this.env.PUBLIC_ORIGIN,OPENCLAW_GATEWAY_PASSWORD:this.env.SOPSUTIL_CF_GATEWAY_PASSWORD??'',SOPSUTIL_TEAMS_CERTIFICATE_B64:this.env.SOPSUTIL_TEAMS_CERTIFICATE_B64??''};
  async onActivityExpired(){
   // Keep running if the checkpoint is unavailable; never deliberately sleep
   // with unsaved SQLite, configuration, or workspace state.
@@ -21,8 +21,8 @@ export class SopsutilContainer extends Container<Env>{
 SopsutilContainer.outboundByHost={
  'sopsutil-storage.internal':async(request,env:Env)=>{
   const path=new URL(request.url).pathname;
-  if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup'||path==='/gh')){
-   const key=path==='/gh'?'bootstrap/gh-2.100.0-linux-amd64':path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
+  if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup'||path==='/gh'||path==='/msteams')){
+   const key=path==='/msteams'?'bootstrap/openclaw-msteams-2026.9.3.tgz':path==='/gh'?'bootstrap/gh-2.100.0-linux-amd64':path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
    const object=await env.SOPSUTIL_DATA.get(key);return object?new Response(object.body,{headers:{'Cache-Control':'no-store'}}):new Response('Missing',{status:404});
   }
   if(path==='/backup'&&request.method==='PUT'){
@@ -60,5 +60,5 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  const clean=new Request(request);for(const name of ['forwarded','x-forwarded-for','x-real-ip','x-forwarded-user','cf-access-authenticated-user-email','x-openclaw-scopes'])clean.headers.delete(name);
  clean.headers.set('X-Forwarded-For',request.headers.get('CF-Connecting-IP')!);
  clean.headers.set('X-Forwarded-Proto','https');clean.headers.set('X-Forwarded-Host',url.host);
- return container.fetch(clean);
+ return container.fetch(isTeamsWebhook?switchPort(clean,3978):clean);
 }};
