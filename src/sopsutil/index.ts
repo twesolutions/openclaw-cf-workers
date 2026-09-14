@@ -36,11 +36,20 @@ SopsutilContainer.outboundByHost={
 };
 function allowedIP(value:string){const p=value.split('.');return p.length===4&&p.slice(0,3).join('.')==='63.251.196'&&/^\d{1,3}$/.test(p[3])&&Number(p[3])<=255;}
 export default {async fetch(request:Request,env:Env):Promise<Response>{
- // Preserve the operator's existing datacenter boundary; never expose internal
- // storage, backup, device-management, or diagnostic services publicly.
- if(!allowedIP(request.headers.get('CF-Connecting-IP')??''))return new Response('Forbidden',{status:403});
+ const url=new URL(request.url);
+ const isTeamsWebhook=url.pathname==='/api/messages';
+ // Preserve the operator's existing datacenter boundary. The only public
+ // exception is the exact Bot Framework webhook: POST only, no query string,
+ // no browser preflight, and no forwarding of client-controlled proxy headers.
+ if(isTeamsWebhook){
+  if(request.method!=='POST'||url.search)return new Response('Method not allowed',{status:405,headers:{Allow:'POST','Cache-Control':'no-store'}});
+  const contentType=request.headers.get('content-type')?.split(';',1)[0].trim().toLowerCase();
+  if(contentType!=='application/json')return new Response('Unsupported media type',{status:415,headers:{'Cache-Control':'no-store'}});
+  const length=Number(request.headers.get('content-length')??'0');
+  if(Number.isFinite(length)&&length>1024*1024)return new Response('Too large',{status:413,headers:{'Cache-Control':'no-store'}});
+ }else if(!allowedIP(request.headers.get('CF-Connecting-IP')??''))return new Response('Forbidden',{status:403});
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
- const url=new URL(request.url);if(url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
+ if(url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(error){
   const text=error instanceof Error?error.message:'';
