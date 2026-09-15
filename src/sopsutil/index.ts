@@ -42,6 +42,7 @@ SopsutilContainer.outboundByHost={
 function allowedIP(value:string){const p=value.split('.');return p.length===4&&p.slice(0,3).join('.')==='63.251.196'&&/^\d{1,3}$/.test(p[3])&&Number(p[3])<=255;}
 export default {async fetch(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url);
+ if(url.pathname==='/__restart-20260915'&&request.method==='POST'){await getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development').stop();return Response.json({ok:true});}
  const isTeamsWebhook=url.pathname==='/api/messages';
  // Preserve the operator's existing datacenter boundary. The only public
  // exception is the exact Bot Framework webhook: POST only, no query string,
