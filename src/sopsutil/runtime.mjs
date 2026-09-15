@@ -59,7 +59,7 @@ async function main(){
   if(createHash('sha256').update(packageBytes).digest('hex')!=='3226c7907ce7dc139d365b87bfbe17cb6ee8cd356dbb5afce765a78fc75fa998')throw new Error('msteams_package_checksum');
   const packagePath='/home/node/openclaw-msteams-2026.9.3.tgz';await writeFile(packagePath,packageBytes,{mode:0o600});
   await rm(pluginDir,{recursive:true,force:true});
-  await run(['plugins','install','npm-pack:'+packagePath,'--force']);await rm(packagePath);
+  await run(['plugins','install','npm-pack:'+packagePath,'--force','--accept-capabilities']);await rm(packagePath);
  }
  // Import the dedicated Teams certificate from a runtime-only secret. The PEM
  // never enters Worker source, configuration JSON, logs, or the R2 seed.
