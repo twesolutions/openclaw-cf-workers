@@ -106,4 +106,4 @@ async function main(){
  const timer=setInterval(()=>checkpoint().catch(()=>console.error('checkpoint_failed')),300000);timer.unref();
  for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{if(shuttingDown)return;shuttingDown=true;clearInterval(timer);gateway.kill('SIGTERM');await new Promise(r=>gateway.once('exit',r));try{await checkpoint();}catch{console.error('final_checkpoint_failed');process.exit(1);}server.close();process.exit(0);});
 }
-main().catch(e=>{console.error('bootstrap_failed',e.message);process.exit(1);});
+main().catch(async e=>{console.error('bootstrap_failed',e.message);try{await request('/diagnostic',{method:'PUT',body:JSON.stringify({at:new Date().toISOString(),message:String(e?.message??e).slice(0,1000)})});}catch{}process.exit(1);});

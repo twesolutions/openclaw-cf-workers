@@ -32,6 +32,10 @@ SopsutilContainer.outboundByHost={
    await env.SOPSUTIL_DATA.put('backups/latest.tar.gz',bytes,{customMetadata:{sha256:checksum,createdAt:new Date().toISOString()}});
    return Response.json({ok:true});
   }
+  if(path==='/diagnostic'&&request.method==='PUT'){
+   const bytes=await request.arrayBuffer();if(bytes.byteLength>4096)return new Response('Too large',{status:413});
+   await env.SOPSUTIL_DATA.put('diagnostics/runtime.json',bytes,{customMetadata:{createdAt:new Date().toISOString()}});return Response.json({ok:true});
+  }
   return new Response('Forbidden',{status:403});
  }
 };
