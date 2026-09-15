@@ -56,14 +56,15 @@ async function main(){
   if(e.code!=='ENOENT')throw e;
   const response=await request('/msteams');if(response.status===404)throw new Error('msteams_package_missing');
   const packageBytes=Buffer.from(await response.arrayBuffer());
-  if(createHash('sha256').update(packageBytes).digest('hex')!=='3226c7907ce7dc139d365b87bfbe17cb6ee8cd356dbb5afce765a78fc75fa998')throw new Error('msteams_package_checksum');
-  const packagePath='/home/node/openclaw-msteams-2026.9.3.tgz';await writeFile(packagePath,packageBytes,{mode:0o600});
+  if(createHash('sha256').update(packageBytes).digest('hex')!=='87f1b81dfe4d9465cbdd4c23d4d86e63f24bd842e02328eeeb27629c9bc6fab8')throw new Error('msteams_package_checksum');
+  const packagePath='/home/node/openclaw-msteams-2026.9.3-bundle.tgz';await writeFile(packagePath,packageBytes,{mode:0o600});
   // A restored configured channel can require consent before the install CLI
   // gets a chance to record it. Disable that incomplete copy for this one run.
   const bootstrapConfigPath=join(root,'openclaw.json');
   try{const c=JSON.parse(await readFile(bootstrapConfigPath,'utf8'));if(c.channels)delete c.channels.msteams;c.plugins??={};c.plugins.entries??={};c.plugins.entries.msteams={enabled:false};c.agents??={};c.agents.entries??={};if(Array.isArray(c.agents.list))for(const legacy of c.agents.list){if(!legacy?.id)continue;const {id,default:wasDefault,...entry}=legacy;c.agents.entries[id]={...(c.agents.entries[id]??{}),...entry};}delete c.agents.list;await writeFile(bootstrapConfigPath,JSON.stringify(c,null,2),{mode:0o600});}catch(e){if(e.code!=='ENOENT')throw e;}
-  await rm(pluginDir,{recursive:true,force:true});
-  await run(['plugins','install','npm-pack:'+packagePath,'--force','--accept-capabilities']);await rm(packagePath);
+  await rm(pluginDir,{recursive:true,force:true});await mkdir(resolve(pluginDir,'..'),{recursive:true});
+  await new Promise((res,rej)=>{const child=spawn('tar',['-xzf',packagePath,'-C',resolve(pluginDir,'..')],{stdio:'ignore'});child.on('error',rej);child.on('close',code=>code===0?res():rej(new Error('msteams_bundle_extract_'+code)));});
+  await run(['plugins','enable','msteams','--accept-capabilities']);await rm(packagePath);
  }
  // Import the dedicated Teams certificate from a runtime-only secret. The PEM
  // never enters Worker source, configuration JSON, logs, or the R2 seed.
