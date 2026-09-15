@@ -17,6 +17,7 @@ export class SopsutilContainer extends Container<Env>{
   await this.stop('SIGTERM');
  }
  async diagnostics(){const r=await this.containerFetch('http://localhost/status',{},18790);return r.json();}
+ async msteamsStatus(){const r=await this.containerFetch('http://localhost/msteams-status',{},18790);return r.json();}
  async checkpointAndRestart(){const r=await this.containerFetch('http://localhost/checkpoint',{method:'POST'},18790);if(!r.ok)throw new Error('checkpoint_required_before_restart');const result=await r.json();await this.stop('SIGTERM');return result;}
 }
 SopsutilContainer.outboundByHost={
