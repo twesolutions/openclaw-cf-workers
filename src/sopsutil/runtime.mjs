@@ -61,7 +61,7 @@ async function main(){
   // A restored configured channel can require consent before the install CLI
   // gets a chance to record it. Disable that incomplete copy for this one run.
   const bootstrapConfigPath=join(root,'openclaw.json');
-  try{const c=JSON.parse(await readFile(bootstrapConfigPath,'utf8'));if(c.channels)delete c.channels.msteams;c.plugins??={};c.plugins.entries??={};c.plugins.entries.msteams={enabled:false};await writeFile(bootstrapConfigPath,JSON.stringify(c,null,2),{mode:0o600});}catch(e){if(e.code!=='ENOENT')throw e;}
+  try{const c=JSON.parse(await readFile(bootstrapConfigPath,'utf8'));if(c.channels)delete c.channels.msteams;c.plugins??={};c.plugins.entries??={};c.plugins.entries.msteams={enabled:false};c.agents??={};c.agents.entries??={};if(Array.isArray(c.agents.list))for(const legacy of c.agents.list){if(!legacy?.id)continue;const {id,default:wasDefault,...entry}=legacy;c.agents.entries[id]={...(c.agents.entries[id]??{}),...entry};}delete c.agents.list;await writeFile(bootstrapConfigPath,JSON.stringify(c,null,2),{mode:0o600});}catch(e){if(e.code!=='ENOENT')throw e;}
   await rm(pluginDir,{recursive:true,force:true});
   await run(['plugins','install','npm-pack:'+packagePath,'--force','--accept-capabilities']);await rm(packagePath);
  }
