@@ -11,6 +11,7 @@ let ghVersion=null;
 let gateway, checkpointing=false, lastBackup=null, failure=null, shuttingDown=false;
 function run(args){return new Promise((res,rej)=>{const child=spawn('node',[cli,...args],{stdio:['ignore','pipe','pipe']});let output='',errors='';child.stdout.on('data',b=>{output+=b;if(output.length>4e6)child.kill();});child.stderr.on('data',b=>{errors=(errors+b).slice(-2000);});child.on('error',rej);child.on('close',code=>code===0?res(output):rej(new Error(('cli_failed_'+args[0]+'_'+code+' '+errors).replace(/https?:\/\/\S+/g,'[url]').slice(0,1000))));});}
 async function request(path,init){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(240000)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
+async function diagnostic(stage){try{await request('/diagnostic',{method:'PUT',body:JSON.stringify({at:new Date().toISOString(),stage})});}catch{}}
 async function restore(){
  const r=await request('/backup');if(r.status===404)return;
  const archive='/home/node/restore.tar.gz';await writeFile(archive,Buffer.from(await r.arrayBuffer()),{mode:0o600});
@@ -49,8 +50,8 @@ async function installGitHubCli(){
  ghVersion=await new Promise((res,rej)=>{const child=spawn('gh',['--version'],{stdio:['ignore','pipe','ignore']});let output='';child.stdout.on('data',b=>output+=b);child.on('error',rej);child.on('close',code=>code===0?res(output.split('\n')[0]):rej(new Error('github_cli_version_failed')));});
 }
 async function main(){
- await installGitHubCli();
- await restore();await mkdir(root,{recursive:true,mode:0o700});
+ await diagnostic('starting');await installGitHubCli();await diagnostic('github_ready');
+ await restore();await mkdir(root,{recursive:true,mode:0o700});await diagnostic('restore_ready');
  const pluginDir=join(root,'extensions','msteams');
  try{await stat(join(pluginDir,'openclaw.plugin.json'));await stat(join(pluginDir,'node_modules'));}catch(e){
   if(e.code!=='ENOENT')throw e;
@@ -66,6 +67,7 @@ async function main(){
   await new Promise((res,rej)=>{const child=spawn('tar',['-xzf',packagePath,'-C',resolve(pluginDir,'..')],{stdio:'ignore'});child.on('error',rej);child.on('close',code=>code===0?res():rej(new Error('msteams_bundle_extract_'+code)));});
   await run(['plugins','enable','msteams','--accept-capabilities']);await rm(packagePath);
  }
+ await diagnostic('plugin_ready');
  // Import the dedicated Teams certificate from a runtime-only secret. The PEM
  // never enters Worker source, configuration JSON, logs, or the R2 seed.
  const teamsCert=process.env.SOPSUTIL_TEAMS_CERTIFICATE_B64;
@@ -99,7 +101,7 @@ async function main(){
  config.channels??={};
  config.channels.msteams={...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:TWE_MEMBER_OBJECT_IDS,groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},webhook:{port:3978,path:'/api/messages'}};
  config.bindings=[...(config.bindings??[]).filter(b=>!(b?.match?.channel==='msteams')),{type:'route',agentId:'sopsutil',comment:'Route Teams personal messages to the existing SopsUtil agent',match:{channel:'msteams',accountId:'*'},session:{dmScope:'per-account-channel-peer'}}];
- await writeFile(configPath,JSON.stringify(config,null,2),{mode:0o600});await run(['config','validate']);
+ await writeFile(configPath,JSON.stringify(config,null,2),{mode:0o600});await run(['config','validate']);await diagnostic('config_ready');
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
   try{
@@ -109,7 +111,7 @@ async function main(){
    res.statusCode=404;res.end('{}');
   }catch{res.statusCode=503;res.end(JSON.stringify({error:'operation_failed'}));}
  });server.listen(18790,'0.0.0.0');
- gateway=spawn('node',[cli,'gateway','--bind','lan','--port','18789'],{stdio:'inherit'});
+ gateway=spawn('node',[cli,'gateway','--bind','lan','--port','18789'],{stdio:'inherit'});await diagnostic('gateway_spawned');
  gateway.on('exit',code=>{if(!shuttingDown)process.exit(code??1);});
  const timer=setInterval(()=>checkpoint().catch(()=>console.error('checkpoint_failed')),300000);timer.unref();
  for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{if(shuttingDown)return;shuttingDown=true;clearInterval(timer);gateway.kill('SIGTERM');await new Promise(r=>gateway.once('exit',r));try{await checkpoint();}catch{console.error('final_checkpoint_failed');process.exit(1);}server.close();process.exit(0);});
