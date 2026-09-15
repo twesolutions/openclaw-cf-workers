@@ -52,13 +52,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
  if(url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
- try{
-  try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(first){
-   if(!/not running/i.test(first instanceof Error?first.message:''))throw first;
-   await container.start();
-   await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});
-  }
- }catch(error){
+ try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(error){
   const text=error instanceof Error?error.message:'';
   await env.SOPSUTIL_DATA.put('diagnostics/startup.json',JSON.stringify({at:new Date().toISOString(),message:text.split(env.SOPSUTIL_CF_GATEWAY_PASSWORD).join('[redacted]').slice(0,1000)}));
   const category=/image/i.test(text)?'image_start_failed':/port/i.test(text)?'port_not_ready':/timeout|timed out/i.test(text)?'startup_timeout':/exited|exit code/i.test(text)?'process_exited':'container_start_failed';
