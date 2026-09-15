@@ -4,7 +4,7 @@ export {ContainerProxy};
 interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
- requiredPorts=[18789,18790];
+ requiredPorts=[18789,18790,3978];
  pingEndpoint='localhost/healthz';
  sleepAfter='15m';
  entrypoint=['node','--input-type=module','-e',runtime];
