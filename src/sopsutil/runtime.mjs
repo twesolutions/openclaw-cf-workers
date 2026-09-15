@@ -58,6 +58,10 @@ async function main(){
   const packageBytes=Buffer.from(await response.arrayBuffer());
   if(createHash('sha256').update(packageBytes).digest('hex')!=='3226c7907ce7dc139d365b87bfbe17cb6ee8cd356dbb5afce765a78fc75fa998')throw new Error('msteams_package_checksum');
   const packagePath='/home/node/openclaw-msteams-2026.9.3.tgz';await writeFile(packagePath,packageBytes,{mode:0o600});
+  // A restored configured channel can require consent before the install CLI
+  // gets a chance to record it. Disable that incomplete copy for this one run.
+  const bootstrapConfigPath=join(root,'openclaw.json');
+  try{const c=JSON.parse(await readFile(bootstrapConfigPath,'utf8'));if(c.channels)delete c.channels.msteams;c.plugins??={};c.plugins.entries??={};c.plugins.entries.msteams={enabled:false};await writeFile(bootstrapConfigPath,JSON.stringify(c,null,2),{mode:0o600});}catch(e){if(e.code!=='ENOENT')throw e;}
   await rm(pluginDir,{recursive:true,force:true});
   await run(['plugins','install','npm-pack:'+packagePath,'--force','--accept-capabilities']);await rm(packagePath);
  }
