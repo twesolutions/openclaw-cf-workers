@@ -91,7 +91,9 @@ async function main(){
  config.gateway={...config.gateway,mode:'local',port:18789,bind:'lan',trustedProxies:[...new Set([...(config.gateway?.trustedProxies??[]),'10.1.0.0'])],auth:{mode:'password',password:{source:'env',provider:'default',id:'OPENCLAW_GATEWAY_PASSWORD'}},controlUi:{...config.gateway?.controlUi,allowedOrigins:[process.env.PUBLIC_ORIGIN]}};
  config.agents??={};config.agents.defaults={...config.agents.defaults,workspace};
  config.agents.entries??={};
- config.agents.list??=[{id:'sopsutil',name:'SopsUtil Cloudflare',default:true,workspace}];
+ if(Array.isArray(config.agents.list))for(const legacy of config.agents.list){if(!legacy?.id)continue;const {id,default:wasDefault,...entry}=legacy;config.agents.entries[id]={...(config.agents.entries[id]??{}),...entry};}
+ delete config.agents.list;
+ config.agents.entries.sopsutil={...(config.agents.entries.sopsutil??{}),name:'SopsUtil Cloudflare',workspace};
  config.plugins??={};config.plugins.entries??={};config.plugins.entries.msteams={...(config.plugins.entries.msteams??{}),enabled:true};
  config.channels??={};
  config.channels.msteams={...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:TWE_MEMBER_OBJECT_IDS,groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},webhook:{port:3978,path:'/api/messages'}};
