@@ -5,11 +5,12 @@
  "main":"../../src/sopsutil/index.ts",
  "compatibility_date":"2026-09-01",
  "workers_dev":true,
+ "preview_urls":false,
  "rules":[{"type":"Text","globs":["**/runtime.mjs"],"fallthrough":true}],
  "containers":[{"class_name":"SopsutilContainer","image":"docker.io/openclaw/openclaw@sha256:f8c357c15c5347b05e98ed1ea29d046dcd00727189b6669f93c2ed4a1cbe98b7","max_instances":1,"instance_type":"standard-2","ssh":{"enabled":true}}],
  "durable_objects":{"bindings":[{"name":"SOPSUTIL_CONTAINER","class_name":"SopsutilContainer"}]},
  "migrations":[{"tag":"sopsutil-v1","new_sqlite_classes":["SopsutilContainer"]}],
  "r2_buckets":[{"binding":"SOPSUTIL_DATA","bucket_name":"sopsutil-openclaw-dev-data"}],
- "vars":{"PUBLIC_ORIGIN":"https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev"},
+ "vars":{"PUBLIC_ORIGIN":"https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev","SOPSUTIL_ACCESS_AUD":"14b01da07d0cfbee87ef47952a4107b4a9838aa04493bb35f6896f1f9c142957"},
  "observability":{"enabled":false}
 }

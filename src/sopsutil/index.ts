@@ -1,7 +1,8 @@
 import {Container,getContainer,ContainerProxy,switchPort} from '@cloudflare/containers';
 import runtime from './runtime.mjs';
+import {hasApplicationAccess} from './access';
 export {ContainerProxy};
-interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
+interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_ACCESS_AUD?:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
  requiredPorts=[18789,18790,3978];
@@ -40,23 +41,23 @@ SopsutilContainer.outboundByHost={
   return new Response('Forbidden',{status:403});
  }
 };
-function allowedIP(value:string){const p=value.split('.');return p.length===4&&p.slice(0,3).join('.')==='63.251.196'&&/^\d{1,3}$/.test(p[3])&&Number(p[3])<=255;}
-export default {async fetch(request:Request,env:Env):Promise<Response>{
+export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {access?:{aud:string}}):Promise<Response>{
  const url=new URL(request.url);
- if(url.pathname==='/__restart-20260915'&&request.method==='POST'){await getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development').stop();return Response.json({ok:true});}
+ // Preview URLs and alternate hostnames must never bypass hostname Access.
+ if(url.origin!==env.PUBLIC_ORIGIN)return new Response('Forbidden',{status:403});
+ if(url.pathname.startsWith('/__restart-')||url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
  const isTeamsWebhook=url.pathname==='/api/messages';
- // Preserve the operator's existing datacenter boundary. The only public
- // exception is the exact Bot Framework webhook: POST only, no query string,
- // no browser preflight, and no forwarding of client-controlled proxy headers.
+ // The exact Bot Framework webhook retains its separate Microsoft signature
+ // validation at port 3978. It grants no browser or Gateway API access.
  if(isTeamsWebhook){
   if(request.method!=='POST'||url.search)return new Response('Method not allowed',{status:405,headers:{Allow:'POST','Cache-Control':'no-store'}});
   const contentType=request.headers.get('content-type')?.split(';',1)[0].trim().toLowerCase();
   if(contentType!=='application/json')return new Response('Unsupported media type',{status:415,headers:{'Cache-Control':'no-store'}});
   const length=Number(request.headers.get('content-length')??'0');
   if(Number.isFinite(length)&&length>1024*1024)return new Response('Too large',{status:413,headers:{'Cache-Control':'no-store'}});
- }else if(!allowedIP(request.headers.get('CF-Connecting-IP')??''))return new Response('Forbidden',{status:403});
+  if(!/^Bearer \S+$/i.test(request.headers.get('authorization')??''))return new Response('Unauthorized',{status:401,headers:{'Cache-Control':'no-store'}});
+ }else if(!hasApplicationAccess(ctx,env.SOPSUTIL_ACCESS_AUD))return new Response('Cloudflare One access required',{status:403,headers:{'Cache-Control':'no-store'}});
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
- if(url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  try{
   try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(first){
