@@ -3,6 +3,7 @@ import runtime from './runtime.mjs';
 import {hasApplicationAccess} from './access';
 export {ContainerProxy};
 interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_ACCESS_AUD?:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
+const LEGACY_ORIGIN='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
  requiredPorts=[18789,18790,3978];
@@ -43,10 +44,12 @@ SopsutilContainer.outboundByHost={
 };
 export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {access?:{aud:string}}):Promise<Response>{
  const url=new URL(request.url);
+ // Only the canonical hostname and the original signed Teams callback exist.
  // Preview URLs and alternate hostnames must never bypass hostname Access.
- if(url.origin!==env.PUBLIC_ORIGIN)return new Response('Forbidden',{status:403});
+ const isLegacy=url.origin===LEGACY_ORIGIN;
+ if(url.origin!==env.PUBLIC_ORIGIN&&!isLegacy)return new Response('Forbidden',{status:403});
  if(url.pathname.startsWith('/__restart-')||url.pathname.startsWith('/_deployment/'))return new Response('Not found',{status:404});
- const isTeamsWebhook=url.pathname==='/api/messages';
+ const isTeamsWebhook=isLegacy&&url.pathname==='/api/messages';
  // The exact Bot Framework webhook retains its separate Microsoft signature
  // validation at port 3978. It grants no browser or Gateway API access.
  if(isTeamsWebhook){
@@ -56,7 +59,14 @@ export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {acce
   const length=Number(request.headers.get('content-length')??'0');
   if(Number.isFinite(length)&&length>1024*1024)return new Response('Too large',{status:413,headers:{'Cache-Control':'no-store'}});
   if(!/^Bearer \S+$/i.test(request.headers.get('authorization')??''))return new Response('Unauthorized',{status:401,headers:{'Cache-Control':'no-store'}});
- }else if(!hasApplicationAccess(ctx,env.SOPSUTIL_ACCESS_AUD))return new Response('Cloudflare One access required',{status:403,headers:{'Cache-Control':'no-store'}});
+ }else{
+  if(!hasApplicationAccess(ctx,env.SOPSUTIL_ACCESS_AUD))return new Response('Cloudflare One access required',{status:403,headers:{'Cache-Control':'no-store'}});
+  if(isLegacy){
+   if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method not allowed',{status:405,headers:{Allow:'GET, HEAD','Cache-Control':'no-store'}});
+   const destination=new URL(env.PUBLIC_ORIGIN);destination.pathname=url.pathname;destination.search=url.search;
+   return new Response(null,{status:308,headers:{Location:destination.href,'Cache-Control':'no-store'}});
+  }
+ }
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  try{
@@ -71,7 +81,7 @@ export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {acce
   const category=/image/i.test(text)?'image_start_failed':/port/i.test(text)?'port_not_ready':/timeout|timed out/i.test(text)?'startup_timeout':/exited|exit code/i.test(text)?'process_exited':'container_start_failed';
   return Response.json({ok:false,error:category},{status:503,headers:{'Cache-Control':'no-store'}});
  }
- const clean=new Request(request);for(const name of ['forwarded','x-forwarded-for','x-real-ip','x-forwarded-user','cf-access-authenticated-user-email','x-openclaw-scopes'])clean.headers.delete(name);
+ const clean=new Request(request);for(const name of ['forwarded','x-forwarded-for','x-real-ip','x-forwarded-user','cf-access-authenticated-user-email','x-openclaw-scopes','cf-container-target-port'])clean.headers.delete(name);
  clean.headers.set('X-Forwarded-For',request.headers.get('CF-Connecting-IP')!);
  clean.headers.set('X-Forwarded-Proto','https');clean.headers.set('X-Forwarded-Host',url.host);
  return container.fetch(isTeamsWebhook?switchPort(clean,3978):clean);

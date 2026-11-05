@@ -15,7 +15,8 @@ const bundle=await build({entryPoints:['src/sopsutil/index.ts'],bundle:true,writ
  }
 }]} );
 const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
-const origin='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
+const origin='https://sopsbot.tweai.dev';
+const legacy='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
 const env={PUBLIC_ORIGIN:origin,SOPSUTIL_ACCESS_AUD:'this-app',SOPSUTIL_CF_GATEWAY_PASSWORD:'test-only'};
 const context={access:{aud:'this-app'}};
 async function invoke(path,options={},ctx={}){
@@ -47,18 +48,22 @@ test('preview and alternate origin rejected, even with valid Access context',asy
  assert.equal((await invoke('https://version-preview.example.workers.dev/',{},context)).status,403);
  assert.equal(globalThis.__boundaryCalls,0);
 });
+test('client port override cannot reach the private diagnostic service',async()=>{
+ assert.equal((await invoke('/checkpoint',{method:'POST',headers:{'CF-Connecting-IP':'192.0.2.1','cf-container-target-port':'18790'}},context)).status,200);
+ assert.equal(globalThis.__forwardedRequest.headers.get('cf-container-target-port'),null);
+});
 test('retired public administration endpoints never invoke the container',async()=>{
  for(const path of ['/__restart-20260915','/_deployment/status']){
   assert.equal((await invoke(path,{method:'POST'},context)).status,404);assert.equal(globalThis.__boundaryCalls,0);
  }
 });
 test('Teams bypass does not extend to adjacent paths',async()=>{
- for(const path of ['/api/messages/','/api/messages/admin','/tools/invoke','/healthz']){
+ for(const path of ['/api/messages/','/api/messages/admin','/tools/invoke','/healthz'].flatMap(path=>[path,legacy+path])){
   assert.equal((await invoke(path,{method:'POST'})).status,403);assert.equal(globalThis.__boundaryCalls,0);
  }
 });
 test('unsigned Teams requests denied without waking a container',async()=>{
- assert.equal((await invoke('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,401);
+ assert.equal((await invoke(legacy+'/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,401);
  assert.equal(globalThis.__boundaryCalls,0);
 });
 test('Teams method, query, type and size restrictions preserved',async()=>{
@@ -67,9 +72,37 @@ test('Teams method, query, type and size restrictions preserved',async()=>{
   ['/api/messages?x=1',{method:'POST'},405],
   ['/api/messages',{method:'POST',headers:{'Content-Type':'text/plain'}},415],
   ['/api/messages',{method:'POST',headers:{'Content-Type':'application/json','Content-Length':String(1024*1024+1)}},413]
- ]){assert.equal((await invoke(path,options)).status,status);assert.equal(globalThis.__boundaryCalls,0);}
+ ]){assert.equal((await invoke(legacy+path,options)).status,status);assert.equal(globalThis.__boundaryCalls,0);}
 });
 test('Teams bearer goes only to the existing Microsoft signature validator port',async()=>{
- assert.equal((await invoke('/api/messages',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-not-a-real-token'},body:'{}'})).status,200);
+ assert.equal((await invoke(legacy+'/api/messages',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-not-a-real-token'},body:'{}'})).status,200);
  assert.equal(globalThis.__forwardedRequest.headers.get('cf-container-target-port'),'3978');
+});
+test('legacy browser links redirect to canonical path and query only after Access',async()=>{
+ for(const method of ['GET','HEAD']){
+  const response=await invoke(legacy+'/chat/session?name=renewals%20work&view=one',{method},context);
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),origin+'/chat/session?name=renewals%20work&view=one');
+  assert.equal(globalThis.__boundaryCalls,0);
+ }
+ assert.equal((await invoke(legacy+'/chat/session?name=private')).status,403);
+ assert.equal(globalThis.__boundaryCalls,0);
+});
+test('legacy redirect cannot become an open redirect or forward API writes',async()=>{
+ const response=await invoke(legacy+'//attacker.example/path?next=https://evil.example',{},context);
+ assert.equal(response.status,308);
+ assert.equal(new URL(response.headers.get('location')).origin,origin);
+ assert.equal(new URL(response.headers.get('location')).pathname,'//attacker.example/path');
+ assert.equal((await invoke(legacy+'/tools/invoke',{method:'POST'},context)).status,405);
+ assert.equal(globalThis.__boundaryCalls,0);
+});
+test('new canonical hostname has no public Teams exception',async()=>{
+ assert.equal((await invoke('/api/messages',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-not-a-real-token'},body:'{}'})).status,403);
+ assert.equal(globalThis.__boundaryCalls,0);
+});
+test('legacy administration endpoints remain retired before any redirect',async()=>{
+ for(const path of ['/__restart-20260915','/_deployment/status']){
+  assert.equal((await invoke(legacy+path,{method:'POST'},context)).status,404);
+  assert.equal(globalThis.__boundaryCalls,0);
+ }
 });
