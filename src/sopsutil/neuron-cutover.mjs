@@ -38,11 +38,11 @@ const operations=[
 const batchPath=root+'/.bootstrap/neuron-config-'+randomUUID()+'.json';
 await writeFile(batchPath,JSON.stringify(operations),{mode:0o600});
 try{
- await cli(['config','set','--batch-file',batchPath,'--dry-run']);
+ await cli(['config','set','--batch-file',batchPath,'--replace','--dry-run']);
  assert.equal(await readFile(configPath,'utf8'),beforeRaw,'configuration_changed_during_plan');
  if(!apply){console.log(JSON.stringify({dryRun:true,primary,modelCount:Object.keys(fragment.agents.defaults.models).length,sessionCount:sessions.length,paths:operations.map(o=>o.path)}));}
  else{
-  await cli(['config','set','--batch-file',batchPath]);
+  await cli(['config','set','--batch-file',batchPath,'--replace']);
   await cli(['config','validate']);
   const after=JSON.parse(await readFile(configPath,'utf8'));
   for(const key of ['gateway','channels','auth','bindings','secrets'])assert.deepEqual(after[key],before[key],key+'_changed');
