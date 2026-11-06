@@ -17,7 +17,7 @@ test('model integration preserves gateway, Teams, workspace and identity while r
  assert.equal(JSON.stringify({gateway:config.gateway,channels:config.channels,auth:config.auth}),preserved);
  assert.equal(config.agents.defaults.workspace,'/workspace');assert.equal(config.agents.defaults.maxConcurrent,2);
  assert.equal(config.agents.entries.sopsutil.model,'cloudflare/openai/gpt-5.6-sol');
- assert.deepEqual(Object.keys(config.models.providers).sort(),['cloudflare','cloudflare-messages']);
+ assert.deepEqual(Object.keys(config.models.providers).sort(),['cloudflare','cloudflare-messages','cloudflare-workers']);
  assert.equal(config.models.mode,'replace');assert.equal(Object.keys(config.agents.defaults.models).length,114);
  assert.equal(JSON.stringify(config).includes('invalid-fixture'),false);
 });
@@ -26,4 +26,14 @@ test('missing inference credential or wrong upstream URL refuses startup without
  await assert.rejects(make(catalog,false)(c),/cloudflare_inference_secret_required/);
  const bad=structuredClone(catalog);bad.models.providers.cloudflare.baseUrl='https://api.openai.com/v1';
  await assert.rejects(make(bad)(c),/cloudflare_model_catalog_invalid/);assert.equal(JSON.stringify(c),original);
+});
+
+test('legacy hosted references migrate to isolated postpaid provider while preserving unrelated agent settings',async()=>{
+ const config={agents:{entries:{sopsutil:{name:'preserve',model:{primary:'cloudflare/@cf/zai-org/glm-5.3',fallbacks:['cloudflare/@cf/zai-org/glm-5.3-flash']}}}}};
+ await make()(config);
+ assert.equal(config.agents.entries.sopsutil.name,'preserve');
+ assert.equal(config.agents.entries.sopsutil.model.primary,'cloudflare-workers/@cf/zai-org/glm-5.3');
+ assert.deepEqual([...config.agents.entries.sopsutil.model.fallbacks],['cloudflare-workers/@cf/zai-org/glm-5.3-flash']);
+ assert.equal(config.agents.defaults.model.primary,'cloudflare-workers/@cf/zai-org/glm-5.3');
+ assert.deepEqual([...config.agents.defaults.model.fallbacks],[]);
 });

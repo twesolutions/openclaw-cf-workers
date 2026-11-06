@@ -1,5 +1,6 @@
 import {Container,getContainer,ContainerProxy,switchPort} from '@cloudflare/containers';
 import runtime from './runtime.mjs';
+import neuronCutover from './neuron-cutover.mjs';
 import modelConfig from '../../deploy/sopsutil/models.json';
 import {hasApplicationAccess} from './access';
 export {ContainerProxy};
@@ -33,6 +34,12 @@ export class SopsutilContainer extends Container<Env>{
   if(!this.ctx.container?.running)throw new Error('maintenance_requires_running');
   const process=await this.#nativeExec(['node','--input-type=module','-e',`import{readFile,readdir,stat}from'node:fs/promises';import{spawnSync}from'node:child_process';const root='/home/node/.openclaw';const c=JSON.parse(await readFile(root+'/openclaw.json','utf8'));const backups=[];for(const name of await readdir('/home/node/checkpoints').catch(()=>[])){const s=await stat('/home/node/checkpoints/'+name);if(s.isFile())backups.push({name,size:s.size});}console.log(JSON.stringify({version:spawnSync('node',['/app/openclaw.mjs','--version'],{encoding:'utf8'}).stdout.trim(),node:process.version,primary:c.agents?.defaults?.model,reloadMode:c.gateway?.reload?.mode??'hybrid',backups}));`],60000);
   const out=await process.output();if(out.exitCode!==0)throw new Error('maintenance_inspect_failed');return JSON.parse(new TextDecoder().decode(out.stdout));
+ }
+ async configurePostpaidNeurons(apply=false):Promise<unknown>{
+  if(typeof apply!=='boolean')throw new Error('boolean_required');
+  const process=await this.#nativeExec(['node','--input-type=module','-e',neuronCutover,apply?'apply':'plan'],240000);
+  const out=await process.output();if(out.exitCode!==0){let report;try{report=JSON.parse(new TextDecoder().decode(out.stdout));}catch{}throw new Error(report?.error??'native_neuron_configuration_failed');}
+  return JSON.parse(new TextDecoder().decode(out.stdout));
  }
  async inspectNeuronRoute():Promise<unknown>{
   const process=await this.#nativeExec(['node','--input-type=module','-e',`import{readFile}from'node:fs/promises';import{spawn}from'node:child_process';const c=JSON.parse(await readFile('/home/node/.openclaw/openclaw.json','utf8'));const r=await fetch('https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.CLOUDFLARE_AI_API_TOKEN,'Content-Type':'application/json','cf-aig-gateway-id':'default'},body:JSON.stringify({model:'@cf/zai-org/glm-5.3',messages:[{role:'user',content:'Reply exactly OK.'}],max_tokens:256,stream:false}),signal:AbortSignal.timeout(60000)});let b;try{b=await r.json();}catch{b={};}const safe=value=>{let s=String(value??'');for(const[k,v]of Object.entries(process.env))if(v&&/PASSWORD|TOKEN|SECRET|KEY|CERTIFICATE/i.test(k))s=s.split(v).join('[redacted]');return s.slice(0,1000);};const child=spawn('node',['/app/openclaw.mjs','sessions','--all-agents','--limit','all','--json'],{stdio:['ignore','pipe','ignore']});let data='';for await(const t of child.stdout)data+=t;const inventory=JSON.parse(data);console.log(JSON.stringify({primary:c.agents?.defaults?.model,agents:Object.fromEntries(Object.entries(c.agents?.entries??{}).map(([id,a])=>[id,{model:a.model}])),providers:Object.fromEntries(Object.entries(c.models?.providers??{}).map(([id,p])=>[id,{baseUrl:p.baseUrl,api:p.api,modelCount:p.models?.length}])),sessions:(inventory.sessions??[]).map(s=>({key:s.key,agentId:s.agentId,sessionId:s.sessionId,model:s.model,modelProvider:s.modelProvider,modelOverride:s.modelOverride,providerOverride:s.providerOverride})),probe:{status:r.status,model:b.model,choices:b.choices?.length,textPresent:!!b.choices?.[0]?.message?.content,usage:b.usage,error:b.error?{code:b.error.code,type:b.error.type,message:safe(b.error.message)}:undefined,errors:b.errors?.map(e=>({code:e.code,message:safe(e.message),extra:e.extra}))}}));`],150000);
