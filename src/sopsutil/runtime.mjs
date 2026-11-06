@@ -49,13 +49,9 @@ async function configureModels(config){
  config.agents??={};config.agents.defaults??={};
  const defaults=config.agents.defaults;
  defaults.models={...fragment.agents.defaults.models,...defaults.models};
- // Convert the legacy alias-map restriction explicitly, retaining its choices
- // while admitting the two user-requested native providers. An explicit empty
- // policy stays unrestricted; existing nonempty restrictions keep other rules.
- const nativeProviders=['anthropic/*','openai/*'];
- const extendPolicy=policy=>Array.isArray(policy?.allow)&&policy.allow.length?{...policy,allow:[...new Set([...policy.allow,...nativeProviders])]}:policy;
- defaults.modelPolicy=Object.hasOwn(defaults,'modelPolicy')?extendPolicy(defaults.modelPolicy):{allow:[...new Set([...Object.keys(defaults.models),...nativeProviders])]};
- for(const agent of Object.values(config.agents.entries??{}))if(Object.hasOwn(agent,'modelPolicy'))agent.modelPolicy=extendPolicy(agent.modelPolicy);
+ // Aliases are display/settings data, not a managed model restriction.
+ // An explicit empty policy prevents the legacy alias map from limiting choices.
+ defaults.modelPolicy??={};
  defaults.model??=fragment.agents.defaults.model;
  // The sole legacy migration is hosted Cloudflare's old shared provider name.
  // Never rewrite a native provider or another exact user selection.

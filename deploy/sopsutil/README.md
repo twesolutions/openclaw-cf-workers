@@ -102,3 +102,5 @@ Deploy the exact reviewed source, checkpoint before restart, verify native provi
 probe and a no-delivery bot response, checkpoint and restore normal startup, then
 verify pairing, UI, health, and anonymous-tools denial. Model selection and managed
 inference do not authorize purchasing credits, enabling top-up, or changing plans.
+
+Model selection is unrestricted: the live repair clears the default and any existing per-agent model policy to explicit empty objects. Bootstrap does not turn the Cloudflare alias map into an allowlist and never reimposes a policy. Future explicit user-authored policies remain user-owned.

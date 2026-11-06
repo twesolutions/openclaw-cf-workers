@@ -7,14 +7,8 @@ import {randomUUID} from 'node:crypto';
 async function main(){
  const apply=process.argv[1]==='apply',root='/home/node/.openclaw';
  const path=root+'/openclaw.json',raw=await readFile(path,'utf8'),before=JSON.parse(raw);
- const extend=(policy,aliases)=>{
-  const extra=['anthropic/*','openai/*'];
-  if(policy===undefined)return {allow:[...new Set([...Object.keys(aliases??{}),...extra])]};
-  if(!Array.isArray(policy.allow)||policy.allow.length===0)return policy;
-  return {...policy,allow:[...new Set([...policy.allow,...extra])]};
- };
- const operations=[{path:'models.mode',value:'merge'},{path:'agents.defaults.modelPolicy',value:extend(before.agents?.defaults?.modelPolicy,before.agents?.defaults?.models)}];
- for(const[id,a]of Object.entries(before.agents?.entries??{}))if(a.modelPolicy!==undefined)operations.push({path:'agents.entries.'+id+'.modelPolicy',value:extend(a.modelPolicy,{})});
+ const operations=[{path:'models.mode',value:'merge'},{path:'agents.defaults.modelPolicy',value:{}}];
+ for(const[id,a]of Object.entries(before.agents?.entries??{}))if(a.modelPolicy!==undefined)operations.push({path:'agents.entries.'+id+'.modelPolicy',value:{}});
  const file=root+'/.bootstrap/native-picker-'+randomUUID()+'.json';
  async function cli(args){
   const p=spawn('node',['/app/openclaw.mjs',...args],{stdio:['ignore','pipe','pipe']});let out='',err='';
@@ -26,7 +20,7 @@ async function main(){
  try{
   await cli(['config','set','--batch-file',file,'--replace','--dry-run']);
   assert.equal(await readFile(path,'utf8'),raw);
-  if(!apply){console.log(JSON.stringify({dryRun:true,mode:'merge',paths:operations.map(o=>o.path),nativeProviders:['anthropic','openai-codex']}));return;}
+  if(!apply){console.log(JSON.stringify({dryRun:true,mode:'merge',paths:operations.map(o=>o.path),unrestricted:true}));return;}
   await cli(['config','set','--batch-file',file,'--replace']);await cli(['config','validate']);
   const after=JSON.parse(await readFile(path,'utf8'));
   for(const key of ['gateway','channels','auth','bindings','secrets'])assert.deepEqual(before[key],after[key]);
