@@ -78,11 +78,16 @@ existing default and per-agent selections, and existing aliases/settings. The on
 preference rewrite is the legacy hosted prefix `cloudflare/@cf/` to the isolated
 postpaid `cloudflare-workers/@cf/` route. Existing session overrides are not changed.
 
-Inspect the live `modelPolicy.allow` (including per-agent policy) before enabling a
-new provider: explicit restrictions can still hide an enrolled native provider.
-Bootstrap preserves policy rather than silently broadening it. After an authorized
-policy/config change, use the native model picker **Refresh** or `models.list` with
-`refresh: true`; model and policy configuration supports hot reload. Do not reset
+Native Anthropic and OpenAI Codex enablement is explicitly user-authorized. If the
+default `modelPolicy` is absent, bootstrap converts the legacy alias-map restriction
+to explicit `allow` entries retaining every existing alias plus `anthropic/*` and
+`openai/*`. Existing nonempty default or per-agent `allow` lists gain only
+those two native prefixes; all other policy fields remain intact. Explicit empty
+policies stay unrestricted, and agents without their own policy keep inheriting.
+This permits native catalog discovery but does not create credentials or prove a
+provider login succeeded. After an authorized policy/config change, use the native
+model picker **Refresh** or `models.list` with `refresh: true`; model and policy
+configuration supports hot reload. Do not reset
 authentication or restart the container merely to refresh a catalog. Verify native
 catalog rows and a strict no-delivery provider response separately.
 To refresh the catalog, read `/ai/catalog/models` (paginated) and `/ai/models/search`

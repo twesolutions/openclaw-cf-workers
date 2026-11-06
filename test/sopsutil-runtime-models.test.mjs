@@ -17,7 +17,7 @@ test('two boots preserve native enrollment, model preferences, aliases, policies
   auth:{order:{anthropic:['anthropic:fixture'],'openai-codex':['openai-codex:fixture']},profiles:{'anthropic:fixture':{provider:'anthropic',mode:'api_key'}}},
   agents:{defaults:{workspace:'/workspace',maxConcurrent:2,
    model:{primary:'openai-codex/native-fixture',fallbacks:['anthropic/native-fixture']},
-   modelPolicy:{allow:['cloudflare-workers/*','anthropic/*','openai-codex/*']},
+   modelPolicy:{allow:['cloudflare-workers/*','anthropic/*','openai/*']},
    models:{'anthropic/native-fixture':{alias:'My native preference',params:{temperature:0.2}},'cloudflare-workers/@cf/zai-org/glm-5.3':{alias:'My hosted preference'}}},
    entries:{sopsutil:{name:'SopsUtil',model:'anthropic/native-fixture'},codex:{model:{primary:'openai-codex/native-fixture',fallbacks:[]}},unqualified:{model:'user-custom-model'}}},
   models:{mode:'replace',providers:{anthropic:{apiKey:{source:'store',provider:'fixture',id:'ANTHROPIC_API_KEY'}},'openai-codex':{baseUrl:'https://native.fixture'},cloudflare:{baseUrl:'https://outdated.fixture'}}}
@@ -39,7 +39,9 @@ test('postpaid Cloudflare defaults apply only when the primary selection is unse
  assert.equal(config.agents.defaults.model.primary,'cloudflare-workers/@cf/zai-org/glm-5.3');
  assert.deepEqual([...config.agents.defaults.model.fallbacks],[]);
  assert.equal(Object.keys(config.agents.defaults.models).length,114);
- assert.equal(config.agents.defaults.modelPolicy,undefined);
+ assert.equal(config.agents.defaults.modelPolicy.allow.length,116);
+ assert.ok(config.agents.defaults.modelPolicy.allow.includes('anthropic/*'));
+ assert.ok(config.agents.defaults.modelPolicy.allow.includes('openai/*'));
  const native={agents:{defaults:{model:'openai-codex/native-fixture'}}};
  await make()(native);assert.equal(native.agents.defaults.model,'openai-codex/native-fixture');
 });
@@ -58,4 +60,36 @@ test('legacy hosted references migrate to isolated postpaid provider while prese
  assert.deepEqual([...config.agents.entries.sopsutil.model.fallbacks],['cloudflare-workers/@cf/zai-org/glm-5.3-flash']);
  assert.equal(config.agents.defaults.model.primary,'cloudflare-workers/@cf/zai-org/glm-5.3');
  assert.deepEqual([...config.agents.defaults.model.fallbacks],[]);
+});
+
+test('legacy alias restriction migrates once while retaining Cloudflare, custom choices and native provider wildcards',async()=>{
+ const config={agents:{defaults:{models:{'custom/native-fixture':{alias:'Keep me'}}},entries:{inherits:{model:'anthropic/native-fixture'}}}};
+ await make()(config);const policy=JSON.stringify(config.agents.defaults.modelPolicy);
+ assert.equal(config.agents.defaults.modelPolicy.allow.length,117);
+ assert.ok(config.agents.defaults.modelPolicy.allow.includes('custom/native-fixture'));
+ for(const ref of Object.keys(catalog.agents.defaults.models))assert.ok(config.agents.defaults.modelPolicy.allow.includes(ref));
+ assert.ok(config.agents.defaults.modelPolicy.allow.includes('anthropic/*'));
+ assert.ok(config.agents.defaults.modelPolicy.allow.includes('openai/*'));
+ assert.equal(config.agents.entries.inherits.modelPolicy,undefined);
+ await make()(config);assert.equal(JSON.stringify(config.agents.defaults.modelPolicy),policy);
+});
+test('explicit nonempty policies admit native providers without dropping rules or broadening explicit empty policies',async()=>{
+ const config={agents:{defaults:{modelPolicy:{allow:['custom/*'],deny:['custom/blocked']}},entries:{
+  restricted:{modelPolicy:{allow:['cloudflare-workers/*'],deny:['anthropic/blocked']}},
+  emptyObject:{modelPolicy:{}},emptyArray:{modelPolicy:{allow:[],deny:['custom/blocked']}}
+ }}};
+ for(let boot=0;boot<2;boot++){
+  await make()(config);
+  assert.deepEqual([...config.agents.defaults.modelPolicy.allow],['custom/*','anthropic/*','openai/*']);
+  assert.deepEqual([...config.agents.defaults.modelPolicy.deny],['custom/blocked']);
+  assert.deepEqual([...config.agents.entries.restricted.modelPolicy.allow],['cloudflare-workers/*','anthropic/*','openai/*']);
+  assert.deepEqual([...config.agents.entries.restricted.modelPolicy.deny],['anthropic/blocked']);
+  assert.equal(JSON.stringify(config.agents.entries.emptyObject.modelPolicy),'{}');
+  assert.equal(JSON.stringify(config.agents.entries.emptyArray.modelPolicy),JSON.stringify({allow:[],deny:['custom/blocked']}));
+ }
+ for(const modelPolicy of [{},{allow:[]}]){
+  const unrestricted={agents:{defaults:{modelPolicy}}};const before=JSON.stringify(modelPolicy);
+  await make()(unrestricted);await make()(unrestricted);
+  assert.equal(JSON.stringify(unrestricted.agents.defaults.modelPolicy),before);
+ }
 });
