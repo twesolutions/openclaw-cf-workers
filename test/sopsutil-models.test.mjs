@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {buildSopsutilModels,PRIMARY,FALLBACK} from '../scripts/build-sopsutil-models.mjs';
+import {buildSopsutilModels,PRIMARY,FALLBACKS,providerFor} from '../scripts/build-sopsutil-models.mjs';
 const external=(id,extra={})=>({model_id:id,name:id,task:'Text Generation',request_formats:['chat-completions'],metadata:{},...extra});
 const hosted=(id,extra={})=>({name:id,task:{name:'Text Generation'},properties:[],...extra});
 const build=(externalRows,workersRows=[])=>buildSopsutilModels(externalRows,workersRows,{asOf:'2026-11-06T00:00:00Z',requireDefaults:false});
@@ -66,8 +66,8 @@ test('uses only inference SecretRefs and injected Bearer auth, routes every alia
   assert.deepEqual(provider.headers,{'cf-aig-gateway-id':'default'});assert.equal(provider.authHeader,true);
  }
  assert.equal(config.models.mode,'replace');
- assert.ok(Object.keys(config.agents.defaults.models).every(ref=>/^cloudflare(?:-messages)?\//.test(ref)));
- assert.equal(config.agents.defaults.model.primary,PRIMARY);assert.deepEqual(config.agents.defaults.model.fallbacks,[FALLBACK]);
+ assert.ok(Object.keys(config.agents.defaults.models).every(ref=>/^cloudflare(?:-messages|-workers)?\//.test(ref)));
+ assert.equal(config.agents.defaults.model.primary,PRIMARY);assert.deepEqual(config.agents.defaults.model.fallbacks,FALLBACKS);
  assert.throws(()=>buildSopsutilModels([],[]),/required_default_model_missing/);
  assert.throws(()=>buildSopsutilModels([],[],{asOf:'not-a-date'}),/invalid_catalog_as_of/);
  assert.doesNotMatch(JSON.stringify(config),/sk-proj-|Bearer /);
@@ -75,12 +75,22 @@ test('uses only inference SecretRefs and injected Bearer auth, routes every alia
 test('checked-in deployment catalog is secret-free and every model has a unique Cloudflare alias',async()=>{
  const config=JSON.parse(await readFile(new URL('../deploy/sopsutil/models.json',import.meta.url),'utf8'));
  const list=models(config);assert.ok(list.length>90);assert.equal(new Set(list.map(x=>x.id)).size,list.length);
- assert.deepEqual(Object.keys(config.models.providers),['cloudflare','cloudflare-messages']);
+ assert.deepEqual(Object.keys(config.models.providers),['cloudflare','cloudflare-messages','cloudflare-workers']);
  assert.equal(Object.keys(config.agents.defaults.models).length,list.length);
- for(const model of list){assert.ok(model.contextWindow>0);assert.ok(model.maxTokens>0);const provider=model.api==='anthropic-messages'?'cloudflare-messages':'cloudflare';assert.ok(config.agents.defaults.models[provider+'/'+model.id]);}
- assert.ok(list.some(x=>'cloudflare/'+x.id===PRIMARY));assert.ok(list.some(x=>'cloudflare/'+x.id===FALLBACK));
+ for(const model of list){assert.ok(model.contextWindow>0);assert.ok(model.maxTokens>0);assert.ok(config.agents.defaults.models[providerFor(model)+'/'+model.id]);}
+ assert.ok(list.some(x=>providerFor(x)+'/'+x.id===PRIMARY));
  for(const provider of Object.values(config.models.providers)){
   assert.deepEqual(provider.apiKey,{source:'env',provider:'default',id:'CLOUDFLARE_AI_API_TOKEN'});assert.equal(provider.authHeader,true);
  }
  assert.doesNotMatch(JSON.stringify(config),/sk-proj-|Bearer /);
+});
+test('separates postpaid hosted inference from prepaid provider cooldowns without losing picker models',()=>{
+ const config=build([external('openai/gpt-6.1-sol')],[hosted('@cf/zai-org/glm-5.3')]);
+ assert.equal(config.agents.defaults.model.primary,'cloudflare-workers/@cf/zai-org/glm-5.3');
+ assert.deepEqual(config.agents.defaults.model.fallbacks,[]);
+ assert.equal(config.models.providers['cloudflare-workers'].models[0].id,'@cf/zai-org/glm-5.3');
+ assert.equal(config.models.providers.cloudflare.models[0].id,'openai/gpt-6.1-sol');
+ assert.match(config.agents.defaults.models[PRIMARY].alias,/Neurons.*postpaid/);
+ assert.match(config.agents.defaults.models['cloudflare/openai/gpt-6.1-sol'].alias,/Unified Billing.*prepaid/);
+ assert.doesNotThrow(()=>buildSopsutilModels([],[hosted('@cf/zai-org/glm-5.3')]));
 });

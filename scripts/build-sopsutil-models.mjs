@@ -2,8 +2,10 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 
 export const ACCOUNT_ID='6eef883dec740547667d5a2522924a3b';
-export const PRIMARY='cloudflare/openai/gpt-6.1-sol';
-export const FALLBACK='cloudflare/@cf/zai-org/glm-5.3';
+export const PRIMARY='cloudflare-workers/@cf/zai-org/glm-5.3';
+export const FALLBACKS=[];
+export const providerFor=model=>model.id.startsWith('@cf/')?'cloudflare-workers':model.api==='anthropic-messages'?'cloudflare-messages':'cloudflare';
+export const aliasFor=model=>model.name+(providerFor(model)==='cloudflare-workers'?' (Cloudflare Neurons · postpaid)':' (Cloudflare Unified Billing · prepaid)');
 const positive=value=>Number.isFinite(Number(value))&&Number(value)>0?Math.floor(Number(value)):undefined;
 const normalize=value=>String(value).toLowerCase().replace(/[^a-z0-9]/g,'');
 const entries=rows=>Array.isArray(rows)?rows:rows?.result??[];
@@ -73,9 +75,8 @@ export function buildSopsutilModels(external,workers,{asOf=new Date().toISOStrin
   const model=modelDefinition(row,false);models.set(model.id,model);
  }
  const sorted=[...models.values()].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
- if(requireDefaults&&(!models.has(PRIMARY.slice('cloudflare/'.length))||!models.has(FALLBACK.slice('cloudflare/'.length))))throw new Error('required_default_model_missing');
- const providerFor=model=>model.api==='anthropic-messages'?'cloudflare-messages':'cloudflare';
- const aliases=Object.fromEntries(sorted.map(model=>[providerFor(model)+'/'+model.id,{alias:model.name+' (Cloudflare)'}]));
+ if(requireDefaults&&!models.has(PRIMARY.slice('cloudflare-workers/'.length)))throw new Error('required_default_model_missing');
+ const aliases=Object.fromEntries(sorted.map(model=>[providerFor(model)+'/'+model.id,{alias:aliasFor(model)}]));
  const base=`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai`;
  const provider=(baseUrl,api,rows)=>({baseUrl,api,apiKey:{source:'env',provider:'default',id:'CLOUDFLARE_AI_API_TOKEN'},authHeader:true,headers:{'cf-aig-gateway-id':'default'},models:rows});
  return {
@@ -85,9 +86,11 @@ export function buildSopsutilModels(external,workers,{asOf=new Date().toISOStrin
   // whose native default x-api-key alone does not meet Cloudflare's contract.
   models:{mode:'replace',providers:{
    cloudflare:provider(base+'/v1','openai-completions',sorted.filter(model=>providerFor(model)==='cloudflare')),
-   'cloudflare-messages':provider(base,'anthropic-messages',sorted.filter(model=>providerFor(model)==='cloudflare-messages'))
+   'cloudflare-messages':provider(base,'anthropic-messages',sorted.filter(model=>providerFor(model)==='cloudflare-messages')),
+   // A prepaid billing cooldown must not suppress account-hosted Neuron models.
+   'cloudflare-workers':provider(base+'/v1','openai-completions',sorted.filter(model=>providerFor(model)==='cloudflare-workers'))
   }},
-  agents:{defaults:{model:{primary:PRIMARY,fallbacks:[FALLBACK]},models:aliases}}
+  agents:{defaults:{model:{primary:PRIMARY,fallbacks:[...FALLBACKS]},models:aliases}}
  };
 }
 

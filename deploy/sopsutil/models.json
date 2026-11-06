@@ -16,492 +16,6 @@
         },
         "models": [
           {
-            "id": "@cf/aisingapore/gemma-sea-lion-v4-27b-it",
-            "name": "aisingapore/gemma-sea-lion-v4-27b-it",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 128000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/daily-co/phonellm-mini-alpha-2",
-            "name": "daily-co/phonellm-mini-alpha-2",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 262140,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-            "name": "deepseek-ai/deepseek-r1-distill-qwen-32b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 80000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/deepseek-ai/deepseek-v4-flash-0731",
-            "name": "deepseek-ai/deepseek-v4-flash-0731",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/deepseek-ai/deepseek-v4-pro-0813",
-            "name": "deepseek-ai/deepseek-v4-pro-0813",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
-            "name": "deepseek-ai/deepseek-v4.1-flash-1017",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/google/gemma-2b-it-lora",
-            "name": "google/gemma-2b-it-lora",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 8192,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/google/gemma-4-26b-a4b-it",
-            "name": "google/gemma-4-26b-a4b-it",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 256000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/google/gemma-7b-it-lora",
-            "name": "google/gemma-7b-it-lora",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 3500,
-            "maxTokens": 3500,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/ibm-granite/granite-4.0-h-micro",
-            "name": "ibm-granite/granite-4.0-h-micro",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 131000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/meta-llama/llama-2-7b-chat-hf-lora",
-            "name": "meta-llama/llama-2-7b-chat-hf-lora",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 8192,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/meta/llama-3.1-8b-instruct-fp8",
-            "name": "meta/llama-3.1-8b-instruct-fp8",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 32000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/meta/llama-3.2-11b-vision-instruct",
-            "name": "meta/llama-3.2-11b-vision-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 128000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/meta/llama-3.2-1b-instruct",
-            "name": "meta/llama-3.2-1b-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 60000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/meta/llama-3.2-3b-instruct",
-            "name": "meta/llama-3.2-3b-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 80000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-            "name": "meta/llama-3.3-70b-instruct-fp8-fast",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 24000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/meta/llama-4-scout-17b-16e-instruct",
-            "name": "meta/llama-4-scout-17b-16e-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 131000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
-            "name": "mistral/mistral-7b-instruct-v0.2-lora",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 15000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/mistralai/mistral-small-3.1-24b-instruct",
-            "name": "mistralai/mistral-small-3.1-24b-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 128000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/moonshotai/kimi-k2.6",
-            "name": "moonshotai/kimi-k2.6",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 262144,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/moonshotai/kimi-k2.7-code",
-            "name": "moonshotai/kimi-k2.7-code",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 262144,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/nvidia/nemotron-3-120b-a12b",
-            "name": "nvidia/nemotron-3-120b-a12b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 256000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/openai/gpt-oss-120b",
-            "name": "openai/gpt-oss-120b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 128000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/openai/gpt-oss-20b",
-            "name": "openai/gpt-oss-20b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 128000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/qwen/qwen2.5-coder-32b-instruct",
-            "name": "qwen/qwen2.5-coder-32b-instruct",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 32768,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/qwen/qwen3-30b-a3b-fp8",
-            "name": "qwen/qwen3-30b-a3b-fp8",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 32768,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/qwen/qwen3.8-27b",
-            "name": "qwen/qwen3.8-27b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 262144,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/qwen/qwq-32b",
-            "name": "qwen/qwq-32b",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 24000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": false
-            }
-          },
-          {
-            "id": "@cf/swiss-ai/apertus-v1.5-8b",
-            "name": "swiss-ai/apertus-v1.5-8b",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 262144,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/utter-project/eurollm-9b-it",
-            "name": "utter-project/eurollm-9b-it",
-            "api": "openai-completions",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 32000,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/zai-org/glm-4.7-flash",
-            "name": "zai-org/glm-4.7-flash",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 131072,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/zai-org/glm-5.2",
-            "name": "zai-org/glm-5.2",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 262144,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/zai-org/glm-5.3",
-            "name": "zai-org/glm-5.3",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
-            "id": "@cf/zai-org/glm-5.3-flash",
-            "name": "zai-org/glm-5.3-flash",
-            "api": "openai-completions",
-            "reasoning": true,
-            "input": [
-              "text",
-              "image"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 8192,
-            "compat": {
-              "supportsTools": true
-            }
-          },
-          {
             "id": "alibaba/qwen3-max",
             "name": "Qwen 3 Max",
             "api": "openai-completions",
@@ -1457,359 +971,858 @@
             "maxTokens": 8192
           }
         ]
+      },
+      "cloudflare-workers": {
+        "baseUrl": "https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1",
+        "api": "openai-completions",
+        "apiKey": {
+          "source": "env",
+          "provider": "default",
+          "id": "CLOUDFLARE_AI_API_TOKEN"
+        },
+        "authHeader": true,
+        "headers": {
+          "cf-aig-gateway-id": "default"
+        },
+        "models": [
+          {
+            "id": "@cf/aisingapore/gemma-sea-lion-v4-27b-it",
+            "name": "aisingapore/gemma-sea-lion-v4-27b-it",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/daily-co/phonellm-mini-alpha-2",
+            "name": "daily-co/phonellm-mini-alpha-2",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 262140,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+            "name": "deepseek-ai/deepseek-r1-distill-qwen-32b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 80000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/deepseek-ai/deepseek-v4-flash-0731",
+            "name": "deepseek-ai/deepseek-v4-flash-0731",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/deepseek-ai/deepseek-v4-pro-0813",
+            "name": "deepseek-ai/deepseek-v4-pro-0813",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+            "name": "deepseek-ai/deepseek-v4.1-flash-1017",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/google/gemma-2b-it-lora",
+            "name": "google/gemma-2b-it-lora",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 8192,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/google/gemma-4-26b-a4b-it",
+            "name": "google/gemma-4-26b-a4b-it",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 256000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/google/gemma-7b-it-lora",
+            "name": "google/gemma-7b-it-lora",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 3500,
+            "maxTokens": 3500,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/ibm-granite/granite-4.0-h-micro",
+            "name": "ibm-granite/granite-4.0-h-micro",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/meta-llama/llama-2-7b-chat-hf-lora",
+            "name": "meta-llama/llama-2-7b-chat-hf-lora",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 8192,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/meta/llama-3.1-8b-instruct-fp8",
+            "name": "meta/llama-3.1-8b-instruct-fp8",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/meta/llama-3.2-11b-vision-instruct",
+            "name": "meta/llama-3.2-11b-vision-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/meta/llama-3.2-1b-instruct",
+            "name": "meta/llama-3.2-1b-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 60000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/meta/llama-3.2-3b-instruct",
+            "name": "meta/llama-3.2-3b-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 80000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "name": "meta/llama-3.3-70b-instruct-fp8-fast",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 24000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/meta/llama-4-scout-17b-16e-instruct",
+            "name": "meta/llama-4-scout-17b-16e-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 131000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
+            "name": "mistral/mistral-7b-instruct-v0.2-lora",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 15000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/mistralai/mistral-small-3.1-24b-instruct",
+            "name": "mistralai/mistral-small-3.1-24b-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/moonshotai/kimi-k2.6",
+            "name": "moonshotai/kimi-k2.6",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/moonshotai/kimi-k2.7-code",
+            "name": "moonshotai/kimi-k2.7-code",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/nvidia/nemotron-3-120b-a12b",
+            "name": "nvidia/nemotron-3-120b-a12b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 256000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/openai/gpt-oss-120b",
+            "name": "openai/gpt-oss-120b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/openai/gpt-oss-20b",
+            "name": "openai/gpt-oss-20b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/qwen/qwen2.5-coder-32b-instruct",
+            "name": "qwen/qwen2.5-coder-32b-instruct",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32768,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/qwen/qwen3-30b-a3b-fp8",
+            "name": "qwen/qwen3-30b-a3b-fp8",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32768,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/qwen/qwen3.8-27b",
+            "name": "qwen/qwen3.8-27b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/qwen/qwq-32b",
+            "name": "qwen/qwq-32b",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 24000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": false
+            }
+          },
+          {
+            "id": "@cf/swiss-ai/apertus-v1.5-8b",
+            "name": "swiss-ai/apertus-v1.5-8b",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/utter-project/eurollm-9b-it",
+            "name": "utter-project/eurollm-9b-it",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32000,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/zai-org/glm-4.7-flash",
+            "name": "zai-org/glm-4.7-flash",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/zai-org/glm-5.2",
+            "name": "zai-org/glm-5.2",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/zai-org/glm-5.3",
+            "name": "zai-org/glm-5.3",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          },
+          {
+            "id": "@cf/zai-org/glm-5.3-flash",
+            "name": "zai-org/glm-5.3-flash",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsTools": true
+            }
+          }
+        ]
       }
     }
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "cloudflare/openai/gpt-6.1-sol",
-        "fallbacks": [
-          "cloudflare/@cf/zai-org/glm-5.3"
-        ]
+        "primary": "cloudflare-workers/@cf/zai-org/glm-5.3",
+        "fallbacks": []
       },
       "models": {
-        "cloudflare/@cf/aisingapore/gemma-sea-lion-v4-27b-it": {
-          "alias": "aisingapore/gemma-sea-lion-v4-27b-it (Cloudflare)"
+        "cloudflare-workers/@cf/aisingapore/gemma-sea-lion-v4-27b-it": {
+          "alias": "aisingapore/gemma-sea-lion-v4-27b-it (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/daily-co/phonellm-mini-alpha-2": {
-          "alias": "daily-co/phonellm-mini-alpha-2 (Cloudflare)"
+        "cloudflare-workers/@cf/daily-co/phonellm-mini-alpha-2": {
+          "alias": "daily-co/phonellm-mini-alpha-2 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": {
-          "alias": "deepseek-ai/deepseek-r1-distill-qwen-32b (Cloudflare)"
+        "cloudflare-workers/@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": {
+          "alias": "deepseek-ai/deepseek-r1-distill-qwen-32b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/deepseek-ai/deepseek-v4-flash-0731": {
-          "alias": "deepseek-ai/deepseek-v4-flash-0731 (Cloudflare)"
+        "cloudflare-workers/@cf/deepseek-ai/deepseek-v4-flash-0731": {
+          "alias": "deepseek-ai/deepseek-v4-flash-0731 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/deepseek-ai/deepseek-v4-pro-0813": {
-          "alias": "deepseek-ai/deepseek-v4-pro-0813 (Cloudflare)"
+        "cloudflare-workers/@cf/deepseek-ai/deepseek-v4-pro-0813": {
+          "alias": "deepseek-ai/deepseek-v4-pro-0813 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/deepseek-ai/deepseek-v4.1-flash-1017": {
-          "alias": "deepseek-ai/deepseek-v4.1-flash-1017 (Cloudflare)"
+        "cloudflare-workers/@cf/deepseek-ai/deepseek-v4.1-flash-1017": {
+          "alias": "deepseek-ai/deepseek-v4.1-flash-1017 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/google/gemma-2b-it-lora": {
-          "alias": "google/gemma-2b-it-lora (Cloudflare)"
+        "cloudflare-workers/@cf/google/gemma-2b-it-lora": {
+          "alias": "google/gemma-2b-it-lora (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/google/gemma-4-26b-a4b-it": {
-          "alias": "google/gemma-4-26b-a4b-it (Cloudflare)"
+        "cloudflare-workers/@cf/google/gemma-4-26b-a4b-it": {
+          "alias": "google/gemma-4-26b-a4b-it (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/google/gemma-7b-it-lora": {
-          "alias": "google/gemma-7b-it-lora (Cloudflare)"
+        "cloudflare-workers/@cf/google/gemma-7b-it-lora": {
+          "alias": "google/gemma-7b-it-lora (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/ibm-granite/granite-4.0-h-micro": {
-          "alias": "ibm-granite/granite-4.0-h-micro (Cloudflare)"
+        "cloudflare-workers/@cf/ibm-granite/granite-4.0-h-micro": {
+          "alias": "ibm-granite/granite-4.0-h-micro (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta-llama/llama-2-7b-chat-hf-lora": {
-          "alias": "meta-llama/llama-2-7b-chat-hf-lora (Cloudflare)"
+        "cloudflare-workers/@cf/meta-llama/llama-2-7b-chat-hf-lora": {
+          "alias": "meta-llama/llama-2-7b-chat-hf-lora (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-3.1-8b-instruct-fp8": {
-          "alias": "meta/llama-3.1-8b-instruct-fp8 (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-3.1-8b-instruct-fp8": {
+          "alias": "meta/llama-3.1-8b-instruct-fp8 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-3.2-11b-vision-instruct": {
-          "alias": "meta/llama-3.2-11b-vision-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-3.2-11b-vision-instruct": {
+          "alias": "meta/llama-3.2-11b-vision-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-3.2-1b-instruct": {
-          "alias": "meta/llama-3.2-1b-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-3.2-1b-instruct": {
+          "alias": "meta/llama-3.2-1b-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-3.2-3b-instruct": {
-          "alias": "meta/llama-3.2-3b-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-3.2-3b-instruct": {
+          "alias": "meta/llama-3.2-3b-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast": {
-          "alias": "meta/llama-3.3-70b-instruct-fp8-fast (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-3.3-70b-instruct-fp8-fast": {
+          "alias": "meta/llama-3.3-70b-instruct-fp8-fast (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct": {
-          "alias": "meta/llama-4-scout-17b-16e-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/meta/llama-4-scout-17b-16e-instruct": {
+          "alias": "meta/llama-4-scout-17b-16e-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/mistral/mistral-7b-instruct-v0.2-lora": {
-          "alias": "mistral/mistral-7b-instruct-v0.2-lora (Cloudflare)"
+        "cloudflare-workers/@cf/mistral/mistral-7b-instruct-v0.2-lora": {
+          "alias": "mistral/mistral-7b-instruct-v0.2-lora (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/mistralai/mistral-small-3.1-24b-instruct": {
-          "alias": "mistralai/mistral-small-3.1-24b-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/mistralai/mistral-small-3.1-24b-instruct": {
+          "alias": "mistralai/mistral-small-3.1-24b-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/moonshotai/kimi-k2.6": {
-          "alias": "moonshotai/kimi-k2.6 (Cloudflare)"
+        "cloudflare-workers/@cf/moonshotai/kimi-k2.6": {
+          "alias": "moonshotai/kimi-k2.6 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/moonshotai/kimi-k2.7-code": {
-          "alias": "moonshotai/kimi-k2.7-code (Cloudflare)"
+        "cloudflare-workers/@cf/moonshotai/kimi-k2.7-code": {
+          "alias": "moonshotai/kimi-k2.7-code (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/nvidia/nemotron-3-120b-a12b": {
-          "alias": "nvidia/nemotron-3-120b-a12b (Cloudflare)"
+        "cloudflare-workers/@cf/nvidia/nemotron-3-120b-a12b": {
+          "alias": "nvidia/nemotron-3-120b-a12b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/openai/gpt-oss-120b": {
-          "alias": "openai/gpt-oss-120b (Cloudflare)"
+        "cloudflare-workers/@cf/openai/gpt-oss-120b": {
+          "alias": "openai/gpt-oss-120b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/openai/gpt-oss-20b": {
-          "alias": "openai/gpt-oss-20b (Cloudflare)"
+        "cloudflare-workers/@cf/openai/gpt-oss-20b": {
+          "alias": "openai/gpt-oss-20b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/qwen/qwen2.5-coder-32b-instruct": {
-          "alias": "qwen/qwen2.5-coder-32b-instruct (Cloudflare)"
+        "cloudflare-workers/@cf/qwen/qwen2.5-coder-32b-instruct": {
+          "alias": "qwen/qwen2.5-coder-32b-instruct (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/qwen/qwen3-30b-a3b-fp8": {
-          "alias": "qwen/qwen3-30b-a3b-fp8 (Cloudflare)"
+        "cloudflare-workers/@cf/qwen/qwen3-30b-a3b-fp8": {
+          "alias": "qwen/qwen3-30b-a3b-fp8 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/qwen/qwen3.8-27b": {
-          "alias": "qwen/qwen3.8-27b (Cloudflare)"
+        "cloudflare-workers/@cf/qwen/qwen3.8-27b": {
+          "alias": "qwen/qwen3.8-27b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/qwen/qwq-32b": {
-          "alias": "qwen/qwq-32b (Cloudflare)"
+        "cloudflare-workers/@cf/qwen/qwq-32b": {
+          "alias": "qwen/qwq-32b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/swiss-ai/apertus-v1.5-8b": {
-          "alias": "swiss-ai/apertus-v1.5-8b (Cloudflare)"
+        "cloudflare-workers/@cf/swiss-ai/apertus-v1.5-8b": {
+          "alias": "swiss-ai/apertus-v1.5-8b (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/utter-project/eurollm-9b-it": {
-          "alias": "utter-project/eurollm-9b-it (Cloudflare)"
+        "cloudflare-workers/@cf/utter-project/eurollm-9b-it": {
+          "alias": "utter-project/eurollm-9b-it (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/zai-org/glm-4.7-flash": {
-          "alias": "zai-org/glm-4.7-flash (Cloudflare)"
+        "cloudflare-workers/@cf/zai-org/glm-4.7-flash": {
+          "alias": "zai-org/glm-4.7-flash (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/zai-org/glm-5.2": {
-          "alias": "zai-org/glm-5.2 (Cloudflare)"
+        "cloudflare-workers/@cf/zai-org/glm-5.2": {
+          "alias": "zai-org/glm-5.2 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/zai-org/glm-5.3": {
-          "alias": "zai-org/glm-5.3 (Cloudflare)"
+        "cloudflare-workers/@cf/zai-org/glm-5.3": {
+          "alias": "zai-org/glm-5.3 (Cloudflare Neurons · postpaid)"
         },
-        "cloudflare/@cf/zai-org/glm-5.3-flash": {
-          "alias": "zai-org/glm-5.3-flash (Cloudflare)"
+        "cloudflare-workers/@cf/zai-org/glm-5.3-flash": {
+          "alias": "zai-org/glm-5.3-flash (Cloudflare Neurons · postpaid)"
         },
         "cloudflare/alibaba/qwen3-max": {
-          "alias": "Qwen 3 Max (Cloudflare)"
+          "alias": "Qwen 3 Max (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/alibaba/qwen3.5-397b-a17b": {
-          "alias": "Qwen 3.5 397B A17B (Cloudflare)"
+          "alias": "Qwen 3.5 397B A17B (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/alibaba/qwen3.7-max": {
-          "alias": "Qwen 3.7 Max (Cloudflare)"
+          "alias": "Qwen 3.7 Max (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/alibaba/qwen3.7-plus": {
-          "alias": "Qwen 3.7 Plus (Cloudflare)"
+          "alias": "Qwen 3.7 Plus (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/alibaba/qwen3.8-max": {
-          "alias": "Qwen 3.8 Max (Cloudflare)"
+          "alias": "Qwen 3.8 Max (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-fable-5": {
-          "alias": "Claude Fable 5 (Cloudflare)"
+          "alias": "Claude Fable 5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-fable-5.1": {
-          "alias": "Claude Fable 5.1 (Cloudflare)"
+          "alias": "Claude Fable 5.1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-haiku-4.5": {
-          "alias": "Claude Haiku 4.5 (Cloudflare)"
+          "alias": "Claude Haiku 4.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-haiku-5.5": {
-          "alias": "Claude Haiku 5.5 (Cloudflare)"
+          "alias": "Claude Haiku 5.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-4.5": {
-          "alias": "Claude Opus 4.5 (Cloudflare)"
+          "alias": "Claude Opus 4.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-4.6": {
-          "alias": "Claude Opus 4.6 (Cloudflare)"
+          "alias": "Claude Opus 4.6 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-4.7": {
-          "alias": "Claude Opus 4.7 (Cloudflare)"
+          "alias": "Claude Opus 4.7 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-4.8": {
-          "alias": "Claude Opus 4.8 (Cloudflare)"
+          "alias": "Claude Opus 4.8 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-5": {
-          "alias": "Claude Opus 5 (Cloudflare)"
+          "alias": "Claude Opus 5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-opus-5.5": {
-          "alias": "Claude Opus 5.5 (Cloudflare)"
+          "alias": "Claude Opus 5.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-sonnet-4.5": {
-          "alias": "Claude Sonnet 4.5 (Cloudflare)"
+          "alias": "Claude Sonnet 4.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-sonnet-4.6": {
-          "alias": "Claude Sonnet 4.6 (Cloudflare)"
+          "alias": "Claude Sonnet 4.6 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-sonnet-5": {
-          "alias": "Claude Sonnet 5 (Cloudflare)"
+          "alias": "Claude Sonnet 5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/anthropic/claude-sonnet-5.5": {
-          "alias": "Claude Sonnet 5.5 (Cloudflare)"
+          "alias": "Claude Sonnet 5.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/deepseek/deepseek-v4-pro": {
-          "alias": "DeepSeek V4 Pro (Cloudflare)"
+          "alias": "DeepSeek V4 Pro (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/fireworks/ember-1": {
-          "alias": "Ember-1 (Cloudflare)"
+          "alias": "Ember-1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-2.5-flash": {
-          "alias": "Gemini 2.5 Flash (Cloudflare)"
+          "alias": "Gemini 2.5 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-2.5-flash-lite": {
-          "alias": "Gemini 2.5 Flash Lite (Cloudflare)"
+          "alias": "Gemini 2.5 Flash Lite (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-2.5-pro": {
-          "alias": "Gemini 2.5 Pro (Cloudflare)"
+          "alias": "Gemini 2.5 Pro (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3-flash": {
-          "alias": "Gemini 3 Flash (Cloudflare)"
+          "alias": "Gemini 3 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.1-flash-lite": {
-          "alias": "Gemini 3.1 Flash Lite (Cloudflare)"
+          "alias": "Gemini 3.1 Flash Lite (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.1-pro": {
-          "alias": "Gemini 3.1 Pro (Cloudflare)"
+          "alias": "Gemini 3.1 Pro (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.5-flash": {
-          "alias": "Gemini 3.5 Flash (Cloudflare)"
+          "alias": "Gemini 3.5 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.5-flash-lite": {
-          "alias": "Gemini 3.5 Flash-Lite (Cloudflare)"
+          "alias": "Gemini 3.5 Flash-Lite (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.6-flash": {
-          "alias": "Gemini 3.6 Flash (Cloudflare)"
+          "alias": "Gemini 3.6 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.7-flash": {
-          "alias": "Gemini 3.7 Flash (Cloudflare)"
+          "alias": "Gemini 3.7 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-3.8-flash": {
-          "alias": "Gemini 3.8 Flash (Cloudflare)"
+          "alias": "Gemini 3.8 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/google/gemini-4-argon": {
-          "alias": "Gemini 4 Argon (Cloudflare)"
+          "alias": "Gemini 4 Argon (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/meta/muse-spark-1.1": {
-          "alias": "Muse Spark 1.1 (Cloudflare)"
+          "alias": "Muse Spark 1.1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/meta/muse-spark-1.2": {
-          "alias": "Muse Spark 1.2 (Cloudflare)"
+          "alias": "Muse Spark 1.2 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/meta/muse-spark-1.3": {
-          "alias": "Muse Spark 1.3 (Cloudflare)"
+          "alias": "Muse Spark 1.3 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/meta/muse-spark-open": {
-          "alias": "Muse Spark Open (Cloudflare)"
+          "alias": "Muse Spark Open (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/meta/muse-wonder-1.0": {
-          "alias": "Muse Wonder 1.0 (Cloudflare)"
+          "alias": "Muse Wonder 1.0 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/minimax/m2.7": {
-          "alias": "MiniMax M2.7 (Cloudflare)"
+          "alias": "MiniMax M2.7 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/minimax/m3": {
-          "alias": "MiniMax M3 (Cloudflare)"
+          "alias": "MiniMax M3 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/minimax/m3.1-flash": {
-          "alias": "MiniMax M3.1 Flash (Cloudflare)"
+          "alias": "MiniMax M3.1 Flash (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/moonshotai/kimi-k3": {
-          "alias": "Kimi K3 (Cloudflare)"
+          "alias": "Kimi K3 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-4.1": {
-          "alias": "GPT-4.1 (Cloudflare)"
+          "alias": "GPT-4.1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-4.1-mini": {
-          "alias": "GPT-4.1 mini (Cloudflare)"
+          "alias": "GPT-4.1 mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-4.1-nano": {
-          "alias": "GPT-4.1 nano (Cloudflare)"
+          "alias": "GPT-4.1 nano (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-4o": {
-          "alias": "GPT-4o (Cloudflare)"
+          "alias": "GPT-4o (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-4o-mini": {
-          "alias": "GPT-4o mini (Cloudflare)"
+          "alias": "GPT-4o mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5": {
-          "alias": "GPT-5 (Cloudflare)"
+          "alias": "GPT-5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5-mini": {
-          "alias": "GPT-5 mini (Cloudflare)"
+          "alias": "GPT-5 mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5-nano": {
-          "alias": "GPT-5 nano (Cloudflare)"
+          "alias": "GPT-5 nano (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.1": {
-          "alias": "GPT-5.1 (Cloudflare)"
+          "alias": "GPT-5.1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.4": {
-          "alias": "GPT-5.4 (Cloudflare)"
+          "alias": "GPT-5.4 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.4-mini": {
-          "alias": "GPT-5.4 mini (Cloudflare)"
+          "alias": "GPT-5.4 mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.4-nano": {
-          "alias": "GPT-5.4 nano (Cloudflare)"
+          "alias": "GPT-5.4 nano (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.4-pro": {
-          "alias": "GPT-5.4 pro (Cloudflare)"
+          "alias": "GPT-5.4 pro (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.5": {
-          "alias": "GPT-5.5 (Cloudflare)"
+          "alias": "GPT-5.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.5-pro": {
-          "alias": "GPT-5.5 pro (Cloudflare)"
+          "alias": "GPT-5.5 pro (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.6-luna": {
-          "alias": "GPT-5.6 Luna (Cloudflare)"
+          "alias": "GPT-5.6 Luna (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.6-sol": {
-          "alias": "GPT-5.6 Sol (Cloudflare)"
+          "alias": "GPT-5.6 Sol (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-5.6-terra": {
-          "alias": "GPT-5.6 Terra (Cloudflare)"
+          "alias": "GPT-5.6 Terra (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-6-astra": {
-          "alias": "GPT-6 Astra (Cloudflare)"
+          "alias": "GPT-6 Astra (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-6-luna": {
-          "alias": "GPT-6 Luna (Cloudflare)"
+          "alias": "GPT-6 Luna (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-6-sol": {
-          "alias": "GPT-6 Sol (Cloudflare)"
+          "alias": "GPT-6 Sol (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-6.1-sol": {
-          "alias": "GPT-6.1 Sol (Cloudflare)"
+          "alias": "GPT-6.1 Sol (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/gpt-6.1-terra": {
-          "alias": "GPT-6.1 Terra (Cloudflare)"
+          "alias": "GPT-6.1 Terra (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/o3": {
-          "alias": "o3 (Cloudflare)"
+          "alias": "o3 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/o3-mini": {
-          "alias": "o3-mini (Cloudflare)"
+          "alias": "o3-mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/openai/o4-mini": {
-          "alias": "o4-mini (Cloudflare)"
+          "alias": "o4-mini (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/particle/particle-1": {
-          "alias": "Particle-1 (Cloudflare)"
+          "alias": "Particle-1 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/reflection-ai/beam-1.0-501b-a23b": {
-          "alias": "Beam 1.0 501B A23B (Cloudflare)"
+          "alias": "Beam 1.0 501B A23B (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/thinkingmachines/inkling": {
-          "alias": "Inkling (Cloudflare)"
+          "alias": "Inkling (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare-messages/thinkingmachines/inkling-256k": {
-          "alias": "Inkling 256K (Cloudflare)"
+          "alias": "Inkling 256K (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/unbiased/pareto": {
-          "alias": "Pareto (Cloudflare)"
+          "alias": "Pareto (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.20-0309-non-reasoning": {
-          "alias": "Grok 4.20 Non-Reasoning (Cloudflare)"
+          "alias": "Grok 4.20 Non-Reasoning (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.20-0309-reasoning": {
-          "alias": "Grok 4.20 Reasoning (Cloudflare)"
+          "alias": "Grok 4.20 Reasoning (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.20-multi-agent-0309": {
-          "alias": "Grok 4.20 Multi-Agent (Cloudflare)"
+          "alias": "Grok 4.20 Multi-Agent (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.3": {
-          "alias": "Grok 4.3 (Cloudflare)"
+          "alias": "Grok 4.3 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.5": {
-          "alias": "Grok 4.5 (Cloudflare)"
+          "alias": "Grok 4.5 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.6": {
-          "alias": "Grok 4.6 (Cloudflare)"
+          "alias": "Grok 4.6 (Cloudflare Unified Billing · prepaid)"
         },
         "cloudflare/xai/grok-4.7": {
-          "alias": "Grok 4.7 (Cloudflare)"
+          "alias": "Grok 4.7 (Cloudflare Unified Billing · prepaid)"
         }
       }
     }
