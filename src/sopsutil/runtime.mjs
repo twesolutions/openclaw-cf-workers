@@ -229,7 +229,7 @@ async function main(){
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
   try{
-   if(req.url==='/status'&&req.method==='GET'){res.end(JSON.stringify({ok:true,lastBackup,failure,checkpointing,ghVersion,proxyPeer:req.socket.remoteAddress}));return;}
+   if(req.url==='/status'&&req.method==='GET'){res.end(JSON.stringify({ok:true,lastBackup,failure,checkpointing,ghVersion,migrationReceiptReused:!migrationNeeded,proxyPeer:req.socket.remoteAddress}));return;}
    if(req.url==='/model-status'&&req.method==='GET'){res.end(JSON.stringify({primary:config.agents.defaults.model,providers:Object.keys(config.models.providers),models:Object.entries(config.models.providers).flatMap(([provider,p])=>p.models.map(m=>({provider,id:m.id,api:m.api}))),allowedCount:Object.keys(config.agents.defaults.models).length,baseUrl:config.models.providers.cloudflare.baseUrl,credentialSource:config.models.providers.cloudflare.apiKey,credentialPresent:!!process.env.CLOUDFLARE_AI_API_TOKEN}));return;}
    if(req.url==='/model-report'&&req.method==='GET'){try{res.end(await readFile(join(root,'.bootstrap','cloudflare-model-report.json'),'utf8'));}catch{res.statusCode=404;res.end('{}');}return;}
    if(req.url==='/msteams-status'&&req.method==='GET'){
