@@ -19,9 +19,11 @@ const origin='https://sopsbot.tweai.dev';
 const legacy='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
 const env={PUBLIC_ORIGIN:origin,SOPSUTIL_ACCESS_AUD:'this-app',SOPSUTIL_CF_GATEWAY_PASSWORD:'test-only'};
 const context={access:{aud:'this-app'}};
-async function invoke(path,options={},ctx={}){
+async function invoke(path,options={},ctx={},paused=false){
  globalThis.__boundaryCalls=0;
- globalThis.__boundaryContainer={startAndWaitForPorts:async()=>{},fetch:async request=>{
+ globalThis.__boundaryStarts=0;globalThis.__boundaryForwards=0;
+ globalThis.__boundaryContainer={maintenancePaused:async()=>paused,startAndWaitForPorts:async()=>{globalThis.__boundaryStarts++;},fetch:async request=>{
+  globalThis.__boundaryForwards++;
   globalThis.__forwardedRequest=request;
   return new Response('container reached');
  }};
@@ -43,6 +45,26 @@ test('native context for this exact application reaches Gateway, preserving auth
  assert.equal(globalThis.__forwardedRequest.headers.get('X-Forwarded-For'),'192.0.2.1');
  assert.equal(globalThis.__forwardedRequest.headers.get('Cf-Access-Authenticated-User-Email'),null);
  assert.equal(globalThis.__forwardedRequest.headers.get('Authorization'),'Bearer gateway-test');
+});
+test('maintenance gate preserves Access denial and refuses authorized public startup without exposing configuration',async()=>{
+ const denied=await invoke('/',{},{},true);assert.equal(denied.status,403);assert.equal(globalThis.__boundaryCalls,0);
+ const paused=await invoke('/',{},context,true);assert.equal(paused.status,503);assert.deepEqual(await paused.json(),{ok:false,error:'upgrade_in_progress'});
+ assert.equal(paused.headers.get('Cache-Control'),'no-store');assert.equal(globalThis.__boundaryStarts,0);assert.equal(globalThis.__boundaryForwards,0);
+ const resumed=await invoke('/',{},context,false);assert.equal(resumed.status,200);assert.equal(globalThis.__boundaryStarts,1);assert.equal(globalThis.__boundaryForwards,1);
+});
+test('maintenance gate prevents signed Teams callback startup without broadening its authentication exception',async()=>{
+ const paused=await invoke(legacy+'/api/messages',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-not-a-real-token'},body:'{}'},{},true);
+ assert.equal(paused.status,503);assert.equal(globalThis.__boundaryStarts,0);assert.equal(globalThis.__boundaryForwards,0);
+ const unsigned=await invoke(legacy+'/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'},{},true);
+ assert.equal(unsigned.status,401);assert.equal(globalThis.__boundaryCalls,0);
+});
+test('a request admitted just before maintenance cannot restart the old image through not-running recovery',async()=>{
+ await invoke('/',{},context);let checks=0,restarts=0;
+ globalThis.__boundaryContainer.maintenancePaused=async()=>++checks>1;
+ globalThis.__boundaryContainer.startAndWaitForPorts=async()=>{throw new Error('container not running');};
+ globalThis.__boundaryContainer.start=async()=>{restarts++;};
+ const paused=await worker.fetch(new Request(origin),env,context);
+ assert.equal(paused.status,503);assert.deepEqual(await paused.json(),{ok:false,error:'upgrade_in_progress'});assert.equal(restarts,0);
 });
 test('preview and alternate origin rejected, even with valid Access context',async()=>{
  assert.equal((await invoke('https://version-preview.example.workers.dev/',{},context)).status,403);
