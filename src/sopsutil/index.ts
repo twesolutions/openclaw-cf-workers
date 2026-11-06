@@ -115,11 +115,11 @@ export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {acce
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
  try{
-  try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(first){
+  try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:900000,instanceGetTimeoutMS:60000}});}catch(first){
    if(!/not running/i.test(first instanceof Error?first.message:''))throw first;
    if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
    await container.start();
-   await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});
+   await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:900000,instanceGetTimeoutMS:60000}});
   }
  }catch(error){
   const text=error instanceof Error?error.message:'';

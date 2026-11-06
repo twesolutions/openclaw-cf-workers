@@ -21,8 +21,8 @@ const env={PUBLIC_ORIGIN:origin,SOPSUTIL_ACCESS_AUD:'this-app',SOPSUTIL_CF_GATEW
 const context={access:{aud:'this-app'}};
 async function invoke(path,options={},ctx={},paused=false){
  globalThis.__boundaryCalls=0;
- globalThis.__boundaryStarts=0;globalThis.__boundaryForwards=0;
- globalThis.__boundaryContainer={maintenancePaused:async()=>paused,startAndWaitForPorts:async()=>{globalThis.__boundaryStarts++;},fetch:async request=>{
+ globalThis.__boundaryStarts=0;globalThis.__boundaryForwards=0;globalThis.__boundaryStartOptions=[];
+ globalThis.__boundaryContainer={maintenancePaused:async()=>paused,startAndWaitForPorts:async options=>{globalThis.__boundaryStarts++;globalThis.__boundaryStartOptions.push(options);},fetch:async request=>{
   globalThis.__boundaryForwards++;
   globalThis.__forwardedRequest=request;
   return new Response('container reached');
@@ -51,6 +51,18 @@ test('maintenance gate preserves Access denial and refuses authorized public sta
  const paused=await invoke('/',{},context,true);assert.equal(paused.status,503);assert.deepEqual(await paused.json(),{ok:false,error:'upgrade_in_progress'});
  assert.equal(paused.headers.get('Cache-Control'),'no-store');assert.equal(globalThis.__boundaryStarts,0);assert.equal(globalThis.__boundaryForwards,0);
  const resumed=await invoke('/',{},context,false);assert.equal(resumed.status,200);assert.equal(globalThis.__boundaryStarts,1);assert.equal(globalThis.__boundaryForwards,1);
+});
+test('cold start and not-running recovery both allow the measured multi-minute native migration',async()=>{
+ await invoke('/',{},context);
+ assert.equal(globalThis.__boundaryStartOptions[0].cancellationOptions.portReadyTimeoutMS,900000);
+ let attempts=0;globalThis.__boundaryContainer.start=async()=>{};
+ globalThis.__boundaryContainer.startAndWaitForPorts=async options=>{
+  assert.equal(options.cancellationOptions.portReadyTimeoutMS,900000);
+  assert.equal(options.cancellationOptions.instanceGetTimeoutMS,60000);
+  if(++attempts===1)throw new Error('container not running');
+ };
+ assert.equal((await worker.fetch(new Request(origin),env,context)).status,200);
+ assert.equal(attempts,2);
 });
 test('maintenance gate prevents signed Teams callback startup without broadening its authentication exception',async()=>{
  const paused=await invoke(legacy+'/api/messages',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-not-a-real-token'},body:'{}'},{},true);

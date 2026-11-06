@@ -19,7 +19,7 @@ const initial={
  plugins:{entries:{msteams:{enabled:true,customPreserved:'plugin'},other:{enabled:false}}},
  agents:{defaults:{workspace:'/state/workspace-sopsutil'},entries:{sopsutil:{name:'Existing agent'}}},
 };
-function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1',marker=false,dependenciesInstalled=true}={}){
+function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1',marker=false,dependenciesInstalled=true,routeChanged=false}={}){
  const events=[];let doctors=0;
  const files=new Map([['/state/openclaw.json',JSON.stringify(config)]]);
  if(marker)files.set('/state/.bootstrap/msteams-native-install-2026.11.1','official npm install\n');
@@ -44,6 +44,7 @@ function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1
     if(doctors===1){assert.equal(c.channels.msteams,undefined);assert.equal(c.plugins.entries.msteams.enabled,false);}
     else{assert.equal(c.channels.msteams.enabled,true);assert.equal(c.plugins.entries.msteams.enabled,true);}
     if(doctors===doctorFailure)throw new Error('migration_refused');
+    if(doctors===2&&routeChanged){c.channels.msteams.legacyWebhook.port=9999;files.set('/state/openclaw.json',JSON.stringify(c));}
    }
    if(args[0]==='plugins'&&args[1]==='install')dependenciesInstalled=true;
    if(args[0]==='plugins'&&args[1]==='inspect')return JSON.stringify({install:{source:'npm',version},plugin:{trustedOfficialInstall:trusted,dependencyStatus:{requiredInstalled:dependenciesInstalled}}});
@@ -106,4 +107,9 @@ test('failed-boot retry retains original Teams configuration rather than suppres
  const saved=JSON.parse(retry.files.get('/state/openclaw.json'));
  assert.equal(saved.channels.msteams.customPreserved,'channel');assert.equal(saved.plugins.entries.msteams.customPreserved,'plugin');
  assert.equal(retry.files.has(teamsMigrationPath),false);
+});
+
+test('a changed native Teams callback route refuses Gateway startup and retains migration originals',async()=>{
+ const f=fixture({routeChanged:true});await assert.rejects(f.api.main(),/teams_callback_route_changed/);
+ assert.equal(f.events.some(e=>e[0]==='spawn'||e[0]==='listen'),false);assert.ok(f.files.has(teamsMigrationPath));
 });

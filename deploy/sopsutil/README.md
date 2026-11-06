@@ -53,6 +53,8 @@ Native backups omit installed plugin `node_modules`; the versioned bootstrap mar
 
 An image downgrade does not reverse database or configuration migrations. Rollback must restore the full verified pre-upgrade archive together with its matching old image, with all writers stopped, rather than mixing state generations. Current official guidance: [container upgrades](https://github.com/openclaw/openclaw/blob/v2026.11.1/docs/install/docker.md#upgrading-container-images), [old-version bridges](https://github.com/openclaw/openclaw/blob/v2026.11.1/docs/install/updating.md#upgrading-very-old-versions), and [downgrade recovery](https://github.com/openclaw/openclaw/blob/v2026.11.1/docs/install/updating/rollback-and-recovery.md#downgrade). September 2026 installations do not generally need the pre-July bridge; a detected retired same-file memory index still requires the documented 2026.9.7 compatible-copy migration.
 
+Cold-start readiness allows 15 minutes: the actual archived-state rehearsal required about eight minutes of serial native restore, core migration, matching Teams installation, enabled-plugin migration and validation before Gateway launch. This is a readiness budget, not a diagnosis of the earlier SIGTERM interruptions. Private maintenance callers must allow at least the same window.
+
 ## Cloudflare model access
 
 `SOPSUTIL_CF_AI_TOKEN` is a protected Worker secret containing an account-scoped

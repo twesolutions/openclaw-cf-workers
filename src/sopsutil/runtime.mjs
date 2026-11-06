@@ -195,12 +195,14 @@ async function main(){
  config.agents.entries.sopsutil={...(config.agents.entries.sopsutil??{}),name:'SopsUtil Cloudflare',workspace};
  config.plugins??={};config.plugins.entries??={};config.plugins.entries.msteams={...restoredTeams.entry,...(config.plugins.entries.msteams??{}),enabled:true};
  config.channels??={};
- config.channels.msteams={...restoredTeams.channel,...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:TWE_MEMBER_OBJECT_IDS,groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},webhook:{port:3978,path:'/api/messages'}};
+ config.channels.msteams={...restoredTeams.channel,...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:TWE_MEMBER_OBJECT_IDS,groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},legacyWebhook:{port:3978},webhook:{path:'/api/messages'}};
  config.bindings=[...(config.bindings??[]).filter(b=>!(b?.match?.channel==='msteams')),{type:'route',agentId:'sopsutil',comment:'Route Teams personal messages to the existing SopsUtil agent',match:{channel:'msteams',accountId:'*'},session:{dmScope:'per-account-channel-peer'}}];
  await configureModels(config);
  await writeFile(configPath,JSON.stringify(config,null,2),{mode:0o600});
  // The enabled plugin's own durable state must migrate with the current core.
  await run(['doctor','--fix','--non-interactive']);await run(['config','validate']);
+ const readyConfig=JSON.parse(await readFile(configPath,'utf8'));
+ if(readyConfig.channels?.msteams?.legacyWebhook?.port!==3978||readyConfig.channels?.msteams?.webhook?.path!=='/api/messages')throw new Error('teams_callback_route_changed');
  await rm(teamsMigrationPath,{force:true});await diagnostic('config_ready');
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
