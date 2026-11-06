@@ -31,7 +31,7 @@ function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1
   writeFile:async(path,value,options)=>{assert.equal(options.mode,0o600);files.set(path,value);},
   stat:async path=>{if(files.has(path)||path.endsWith('/sopsutil/.git'))return {};throw Object.assign(new Error('missing'),{code:'ENOENT'});},
   mkdir:async()=>{},rm:async path=>{events.push(['remove',path]);files.delete(path);},
-  diagnostic:async stage=>events.push(['diagnostic',stage]),installGitHubCli:async()=>{},restore:async()=>events.push(['restore']),
+  watchGateway:()=>{},diagnostic:async stage=>events.push(['diagnostic',stage]),installGitHubCli:async()=>{},restore:async()=>events.push(['restore']),
   configureModels:async c=>{c.models={providers:{cloudflare:{models:[],apiKey:{source:'env'}}}};c.agents.defaults.model={primary:'cloudflare/openai/gpt-6.1-sol'};},
   request:async path=>{assert.equal(path,'/seed');return {status:200,json:async()=>({})};},
   createServer:()=>({listen:()=>events.push(['listen']),close:()=>{}}),
