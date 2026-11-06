@@ -8,6 +8,8 @@ const source=await readFile('src/sopsutil/runtime.mjs','utf8');
 const teamsVersion=source.match(/const teamsVersion='([^']+)'/)?.[1];
 assert.equal(teamsVersion,'2026.11.1');
 const teamsMigrationPath='/state/.bootstrap/teams-pre-migration-'+teamsVersion+'.json';
+const migrationReceiptPath='/state/.bootstrap/native-migration-complete.json';
+const completedReceipt={format:1,openclawVersion:'2026.11.1',teamsVersion};
 const names=['migrateCore','installTeamsPlugin','main'];
 const functions=names.map(name=>{
  const fn=source.match(new RegExp('async function '+name+'\\(\\)\\{[\\s\\S]*?\\n\\}'))?.[0];
@@ -19,16 +21,18 @@ const initial={
  plugins:{entries:{msteams:{enabled:true,customPreserved:'plugin'},other:{enabled:false}}},
  agents:{defaults:{workspace:'/state/workspace-sopsutil'},entries:{sopsutil:{name:'Existing agent'}}},
 };
-function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1',marker=false,dependenciesInstalled=true,routeChanged=false}={}){
+function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1',runtimeVersion='2026.11.1',marker=false,dependenciesInstalled=true,routeChanged=false,receipt,validateFailure=false,fresh=false}={}){
  const events=[];let doctors=0;
- const files=new Map([['/state/openclaw.json',JSON.stringify(config)]]);
+ const files=new Map([['/state/openclaw.json',JSON.stringify(config)],['/app/package.json',JSON.stringify({version:runtimeVersion})]]);
+ if(fresh)files.delete('/state/openclaw.json');
  if(marker)files.set('/state/.bootstrap/msteams-native-install-2026.11.1','official npm install\n');
+ if(receipt!==undefined)files.set(migrationReceiptPath,typeof receipt==='string'?receipt:JSON.stringify(receipt));
  const env={PUBLIC_ORIGIN:'https://sopsbot.tweai.dev',npm_config_offline:'true'};
  const context={
-  root:'/state',cli:'/app/openclaw.mjs',teamsVersion,teamsMigrationPath,TWE_MEMBER_OBJECT_IDS:['fixture-member'],join,resolve,
+  root:'/state',cli:'/app/openclaw.mjs',teamsVersion,teamsMigrationPath,migrationReceiptPath,TWE_MEMBER_OBJECT_IDS:['fixture-member'],join,resolve,
   process:{env,on:()=>{}},console:{log:()=>{}},
   readFile:async path=>{if(!files.has(path))throw Object.assign(new Error('missing'),{code:'ENOENT'});return files.get(path);},
-  writeFile:async(path,value,options)=>{assert.equal(options.mode,0o600);files.set(path,value);},
+  writeFile:async(path,value,options)=>{assert.equal(options.mode,0o600);events.push(['write',path]);files.set(path,value);},
   stat:async path=>{if(files.has(path)||path.endsWith('/sopsutil/.git'))return {};throw Object.assign(new Error('missing'),{code:'ENOENT'});},
   mkdir:async()=>{},rm:async path=>{events.push(['remove',path]);files.delete(path);},
   watchGateway:()=>{},diagnostic:async stage=>events.push(['diagnostic',stage]),installGitHubCli:async()=>{},restore:async()=>events.push(['restore']),
@@ -41,10 +45,13 @@ function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1
    events.push(['cli',...args]);
    if(args[0]==='doctor'){
     doctors++;const c=JSON.parse(files.get('/state/openclaw.json'));
-    if(doctors===1){assert.equal(c.channels.msteams,undefined);assert.equal(c.plugins.entries.msteams.enabled,false);}
+    if(doctors===1&&!fresh){assert.equal(c.channels.msteams,undefined);assert.equal(c.plugins.entries.msteams.enabled,false);}
     else{assert.equal(c.channels.msteams.enabled,true);assert.equal(c.plugins.entries.msteams.enabled,true);}
     if(doctors===doctorFailure)throw new Error('migration_refused');
-    if(doctors===2&&routeChanged){c.channels.msteams.legacyWebhook.port=9999;files.set('/state/openclaw.json',JSON.stringify(c));}
+   }
+   if(args[0]==='config'&&args[1]==='validate'){
+    if(validateFailure)throw new Error('config_invalid');
+    if(routeChanged){const c=JSON.parse(files.get('/state/openclaw.json'));c.channels.msteams.legacyWebhook.port=9999;files.set('/state/openclaw.json',JSON.stringify(c));}
    }
    if(args[0]==='plugins'&&args[1]==='install')dependenciesInstalled=true;
    if(args[0]==='plugins'&&args[1]==='inspect')return JSON.stringify({install:{source:'npm',version},plugin:{trustedOfficialInstall:trusted,dependencyStatus:{requiredInstalled:dependenciesInstalled}}});
@@ -73,15 +80,20 @@ test('restored older state migrates without loading old Teams, then enabled-plug
  assert.equal(saved.channels.msteams.authType,'federated');assert.equal(saved.channels.msteams.groupPolicy,'disabled');
  assert.ok(f.files.has('/state/.bootstrap/msteams-native-install-2026.11.1'));
  assert.equal(f.files.has(teamsMigrationPath),false);
+ assert.deepEqual(JSON.parse(f.files.get(migrationReceiptPath)),completedReceipt);
+ assert.ok(f.events.findIndex(e=>e[0]==='write'&&e[1]===migrationReceiptPath)>f.events.findIndex(e=>e[0]==='cli'&&e[1]==='config'&&e[2]==='validate'));
+ assert.ok(f.events.findIndex(e=>e[0]==='write'&&e[1]===migrationReceiptPath)>f.events.findIndex(e=>e[0]==='remove'&&e[1]===teamsMigrationPath));
  assert.equal(f.env.npm_config_offline,undefined);
 });
 test('a core migration refusal prevents plugin replacement and Gateway startup',async()=>{
  const f=fixture({doctorFailure:1});await assert.rejects(f.api.main(),/migration_refused/);
  assert.equal(f.events.some(e=>e[0]==='remove'||e[0]==='spawn'||e[0]==='listen'),false);
+ assert.equal(f.files.has(migrationReceiptPath),false);
 });
 test('an enabled-plugin migration refusal prevents serving or Gateway startup',async()=>{
  const f=fixture({doctorFailure:2});await assert.rejects(f.api.main(),/migration_refused/);
  assert.equal(f.events.some(e=>e[0]==='spawn'||e[0]==='listen'),false);
+ assert.equal(f.files.has(migrationReceiptPath),false);
 });
 test('untrusted or mismatched plugin install cannot receive a successful bootstrap marker',async()=>{
  for(const options of [{trusted:false},{version:'2026.9.3'}]){
@@ -112,4 +124,61 @@ test('failed-boot retry retains original Teams configuration rather than suppres
 test('a changed native Teams callback route refuses Gateway startup and retains migration originals',async()=>{
  const f=fixture({routeChanged:true});await assert.rejects(f.api.main(),/teams_callback_route_changed/);
  assert.equal(f.events.some(e=>e[0]==='spawn'||e[0]==='listen'),false);assert.ok(f.files.has(teamsMigrationPath));
+ assert.equal(f.files.has(migrationReceiptPath),false);
+});
+
+test('restoring a completed same-version bootstrap skips Doctor but preserves Teams, provenance and validation',async()=>{
+ const first=fixture();await first.api.main();
+ const f=fixture({config:JSON.parse(first.files.get('/state/openclaw.json')),marker:true,receipt:JSON.parse(first.files.get(migrationReceiptPath))});await f.api.main();
+ const commands=f.events.filter(e=>e[0]==='cli').map(e=>e.slice(1).join(' '));
+ assert.deepEqual(commands,['plugins inspect msteams --json','config validate']);
+ const saved=JSON.parse(f.files.get('/state/openclaw.json'));
+ assert.equal(saved.channels.msteams.customPreserved,'channel');assert.equal(saved.plugins.entries.msteams.customPreserved,'plugin');
+ assert.equal(saved.channels.msteams.enabled,true);assert.equal(saved.plugins.entries.msteams.enabled,true);
+ assert.equal(f.files.has(teamsMigrationPath),false);assert.ok(f.events.some(e=>e[0]==='spawn'));
+});
+
+test('wrong runtime, plugin, receipt format or malformed receipt requires both migration passes',async()=>{
+ for(const receipt of [{...completedReceipt,openclawVersion:'2026.9.3'},{...completedReceipt,teamsVersion:'2026.9.3'},{...completedReceipt,format:0},'{invalid',null]){
+  const f=fixture({marker:true,receipt});await f.api.main();
+  assert.equal(f.events.filter(e=>e[0]==='cli'&&e[1]==='doctor').length,2);
+  assert.deepEqual(JSON.parse(f.files.get(migrationReceiptPath)),completedReceipt);
+ }
+ const f=fixture({marker:true,receipt:completedReceipt,runtimeVersion:'2026.11.2'});await f.api.main();
+ assert.equal(f.events.filter(e=>e[0]==='cli'&&e[1]==='doctor').length,2);
+ assert.equal(JSON.parse(f.files.get(migrationReceiptPath)).openclawVersion,'2026.11.2');
+ const unknown=fixture({runtimeVersion:null,receipt:completedReceipt});await assert.rejects(unknown.api.main(),/runtime_version_missing/);
+ assert.equal(unknown.events.some(e=>e[0]==='cli'||e[0]==='spawn'),false);
+});
+
+test('fresh configuration cannot receive a completion receipt without a core migration pass',async()=>{
+ const f=fixture({fresh:true});await f.api.main();
+ assert.equal(f.events.filter(e=>e[0]==='cli'&&e[1]==='doctor').length,1);
+ assert.equal(f.files.has(migrationReceiptPath),false);
+});
+
+test('pending recovery overrides a completed receipt and restores the original Teams settings',async()=>{
+ const first=fixture({doctorFailure:1});await assert.rejects(first.api.main(),/migration_refused/);
+ const f=fixture({config:JSON.parse(first.files.get('/state/openclaw.json')),marker:true,receipt:completedReceipt});
+ f.files.set(teamsMigrationPath,first.files.get(teamsMigrationPath));await f.api.main();
+ assert.equal(f.events.filter(e=>e[0]==='cli'&&e[1]==='doctor').length,2);
+ assert.equal(JSON.parse(f.files.get('/state/openclaw.json')).channels.msteams.customPreserved,'channel');
+ assert.equal(f.files.has(teamsMigrationPath),false);
+});
+
+test('a completed receipt still repairs missing dependencies and rejects untrusted Teams',async()=>{
+ const f=fixture({marker:true,receipt:completedReceipt,dependenciesInstalled:false});await f.api.main();
+ assert.equal(f.events.filter(e=>e[0]==='cli'&&e[1]==='plugins'&&e[2]==='install').length,1);
+ assert.equal(f.events.some(e=>e[0]==='cli'&&e[1]==='doctor'),false);
+ const untrusted=fixture({marker:true,receipt:completedReceipt,trusted:false});
+ await assert.rejects(untrusted.api.main(),/msteams_native_provenance_missing/);
+ assert.equal(untrusted.events.some(e=>e[0]==='spawn'||e[0]==='listen'),false);
+});
+
+test('failed final validation or callback invariant never records a completed migration',async()=>{
+ const invalid=fixture({validateFailure:true});await assert.rejects(invalid.api.main(),/config_invalid/);
+ assert.equal(invalid.files.has(migrationReceiptPath),false);assert.ok(invalid.files.has(teamsMigrationPath));
+ const reused=fixture({marker:true,receipt:completedReceipt,validateFailure:true});await assert.rejects(reused.api.main(),/config_invalid/);
+ const changed=fixture({marker:true,receipt:completedReceipt,routeChanged:true});await assert.rejects(changed.api.main(),/teams_callback_route_changed/);
+ for(const f of [invalid,reused,changed])assert.equal(f.events.some(e=>e[0]==='spawn'||e[0]==='listen'),false);
 });
