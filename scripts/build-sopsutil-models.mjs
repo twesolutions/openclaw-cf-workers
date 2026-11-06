@@ -84,7 +84,7 @@ export function buildSopsutilModels(external,workers,{asOf=new Date().toISOStrin
   // or /chat/completions. Separate bases avoid accidental /ai/v1/v1/messages.
   // authHeader:true makes OpenClaw inject Bearer auth for the Anthropic SDK,
   // whose native default x-api-key alone does not meet Cloudflare's contract.
-  models:{mode:'replace',providers:{
+  models:{mode:'merge',providers:{
    cloudflare:provider(base+'/v1','openai-completions',sorted.filter(model=>providerFor(model)==='cloudflare')),
    'cloudflare-messages':provider(base,'anthropic-messages',sorted.filter(model=>providerFor(model)==='cloudflare-messages')),
    // A prepaid billing cooldown must not suppress account-hosted Neuron models.

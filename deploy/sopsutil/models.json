@@ -1,6 +1,6 @@
 {
   "models": {
-    "mode": "replace",
+    "mode": "merge",
     "providers": {
       "cloudflare": {
         "baseUrl": "https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1",

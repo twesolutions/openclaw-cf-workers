@@ -67,11 +67,24 @@ SecretRef. Requests use the existing `default` AI Gateway and the unified Cloudf
 language models from Cloudflare's third-party and hosted catalogs, using their
 native Responses, Messages, or Chat Completions adapters. Image/audio/video,
 moderation, and structured-decision-only endpoints are not chatbot selections.
-The current inventory is 114 models. Default: GPT-6.1 Sol; fallback: hosted GLM 5.3.
-The Cloudflare-only allowlist replaces direct model routes while preserving other
-agent, Gateway, Teams, browser-pairing and workspace settings. Existing session
-model overrides are migrated with native `sessions.patch`, not database edits.
+The current Cloudflare inventory is 114 models. For an unset selection, the
+bootstrap default is hosted GLM 5.3 through `cloudflare-workers` (postpaid Neurons),
+with no fallback. Third-party Cloudflare entries remain explicitly labeled prepaid.
 
+The catalog uses `models.mode: "merge"`, allowing native authenticated providers
+such as Anthropic and OpenAI Codex alongside Cloudflare. Bootstrap merges only
+managed Cloudflare provider definitions, preserves user provider/auth configuration,
+existing default and per-agent selections, and existing aliases/settings. The only
+preference rewrite is the legacy hosted prefix `cloudflare/@cf/` to the isolated
+postpaid `cloudflare-workers/@cf/` route. Existing session overrides are not changed.
+
+Inspect the live `modelPolicy.allow` (including per-agent policy) before enabling a
+new provider: explicit restrictions can still hide an enrolled native provider.
+Bootstrap preserves policy rather than silently broadening it. After an authorized
+policy/config change, use the native model picker **Refresh** or `models.list` with
+`refresh: true`; model and policy configuration supports hot reload. Do not reset
+authentication or restart the container merely to refresh a catalog. Verify native
+catalog rows and a strict no-delivery provider response separately.
 To refresh the catalog, read `/ai/catalog/models` (paginated) and `/ai/models/search`
 with an authorized operator credential, then run:
 

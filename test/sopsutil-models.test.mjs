@@ -65,7 +65,7 @@ test('uses only inference SecretRefs and injected Bearer auth, routes every alia
   assert.deepEqual(provider.apiKey,{source:'env',provider:'default',id:'CLOUDFLARE_AI_API_TOKEN'});
   assert.deepEqual(provider.headers,{'cf-aig-gateway-id':'default'});assert.equal(provider.authHeader,true);
  }
- assert.equal(config.models.mode,'replace');
+ assert.equal(config.models.mode,'merge');
  assert.ok(Object.keys(config.agents.defaults.models).every(ref=>/^cloudflare(?:-messages|-workers)?\//.test(ref)));
  assert.equal(config.agents.defaults.model.primary,PRIMARY);assert.deepEqual(config.agents.defaults.model.fallbacks,FALLBACKS);
  assert.throws(()=>buildSopsutilModels([],[]),/required_default_model_missing/);

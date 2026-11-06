@@ -43,16 +43,22 @@ async function configureModels(config){
  const fragment=await response.json();const providers=fragment.models?.providers??{};
  const bases={cloudflare:'https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1','cloudflare-messages':'https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai','cloudflare-workers':'https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1'};
  if(!providers.cloudflare||!providers['cloudflare-workers']||Object.entries(providers).some(([id,p])=>!Object.hasOwn(bases,id)||p.baseUrl!==bases[id]||!p.models?.length||p.apiKey?.source!=='env'||p.apiKey?.id!=='CLOUDFLARE_AI_API_TOKEN'||(id==='cloudflare-messages'&&p.authHeader!==true)))throw new Error('cloudflare_model_catalog_invalid');
- config.models=fragment.models;
- config.agents??={};config.agents.defaults={...config.agents.defaults,...fragment.agents.defaults};
- // Preserve per-agent preferences, mapping only exact known catalog models to
- // the Cloudflare route; unknown old direct routes use the verified default.
- const allowed=new Set(Object.keys(fragment.agents.defaults.models));
- const route=ref=>allowed.has(ref)?ref:[...allowed].find(key=>key.endsWith('/'+ref.replace(/^cloudflare\/(?=@cf\/)/,'')))??fragment.agents.defaults.model.primary;
- for(const agent of Object.values(config.agents.entries??{}))if(agent.model){
-  if(typeof agent.model==='string')agent.model=route(agent.model);
-  else agent.model={...agent.model,primary:route(agent.model.primary??fragment.agents.defaults.model.primary),fallbacks:(agent.model.fallbacks??[]).map(route)};
- }
+ // Cloudflare owns only its managed routes. Native provider enrollment and
+ // model preferences belong to the user and must survive every cold start.
+ config.models={...config.models,mode:'merge',providers:{...config.models?.providers,...providers}};
+ config.agents??={};config.agents.defaults??={};
+ const defaults=config.agents.defaults;
+ defaults.models={...fragment.agents.defaults.models,...defaults.models};
+ defaults.model??=fragment.agents.defaults.model;
+ // The sole legacy migration is hosted Cloudflare's old shared provider name.
+ // Never rewrite a native provider or another exact user selection.
+ const route=ref=>typeof ref==='string'?ref.replace(/^cloudflare\/(?=@cf\/)/,'cloudflare-workers/'):ref;
+ const migrate=model=>typeof model==='string'?route(model):model&&{
+  ...model,...(model.primary!==undefined?{primary:route(model.primary)}:{}),
+  ...(Array.isArray(model.fallbacks)?{fallbacks:model.fallbacks.map(route)}:{})
+ };
+ defaults.model=migrate(defaults.model);
+ for(const agent of Object.values(config.agents.entries??{}))if(agent.model)agent.model=migrate(agent.model);
 }
 function redactDiagnostic(value){
  let text=String(value).replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');
