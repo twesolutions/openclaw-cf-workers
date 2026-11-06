@@ -21,20 +21,25 @@ export class SopsutilContainer extends Container<Env>{
  }
  async diagnostics(){const r=await this.containerFetch('http://localhost/status',{},18790);return r.json();}
  async modelEnvironment(){return {containerRunning:this.ctx.container?.running??false,workerSecretPresent:!!this.env.SOPSUTIL_CF_AI_TOKEN,runtimeSecretPresent:!!this.envVars.CLOUDFLARE_AI_API_TOKEN,environmentNames:Object.keys(this.envVars)};}
- // Account-only RPC maintenance; never routed from the public Worker.
- async maintenanceInfo(){
+ async #nativeExec(args:string[],timeoutMS=240000){
   if(!this.ctx.container?.running)throw new Error('maintenance_requires_running');
-  const process=await this.ctx.container.exec(['node','--input-type=module','-e',`import{readFile,readdir,stat}from'node:fs/promises';import{spawnSync}from'node:child_process';const root='/home/node/.openclaw';const c=JSON.parse(await readFile(root+'/openclaw.json','utf8'));const backups=[];for(const name of await readdir('/home/node/checkpoints').catch(()=>[])){const s=await stat('/home/node/checkpoints/'+name);if(s.isFile())backups.push({name,size:s.size});}console.log(JSON.stringify({version:spawnSync('node',['/app/openclaw.mjs','--version'],{encoding:'utf8'}).stdout.trim(),node:process.version,primary:c.agents?.defaults?.model,reloadMode:c.gateway?.reload?.mode??'hybrid',backups}));`],{env:{HOME:'/home/node',OPENCLAW_STATE_DIR:'/home/node/.openclaw',...this.envVars},signal:AbortSignal.timeout(60000)});
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMS);
+  try{const process=await this.ctx.container.exec(args,{env:{HOME:'/home/node',OPENCLAW_STATE_DIR:'/home/node/.openclaw',...this.envVars},signal:controller.signal});process.exitCode.then(()=>clearTimeout(timer),()=>clearTimeout(timer));return process;}catch(e){clearTimeout(timer);throw e;}
+ }
+ // Account-only RPC maintenance; never routed from the public Worker.
+ async maintenanceInfo():Promise<unknown>{
+  if(!this.ctx.container?.running)throw new Error('maintenance_requires_running');
+  const process=await this.#nativeExec(['node','--input-type=module','-e',`import{readFile,readdir,stat}from'node:fs/promises';import{spawnSync}from'node:child_process';const root='/home/node/.openclaw';const c=JSON.parse(await readFile(root+'/openclaw.json','utf8'));const backups=[];for(const name of await readdir('/home/node/checkpoints').catch(()=>[])){const s=await stat('/home/node/checkpoints/'+name);if(s.isFile())backups.push({name,size:s.size});}console.log(JSON.stringify({version:spawnSync('node',['/app/openclaw.mjs','--version'],{encoding:'utf8'}).stdout.trim(),node:process.version,primary:c.agents?.defaults?.model,reloadMode:c.gateway?.reload?.mode??'hybrid',backups}));`],60000);
   const out=await process.output();if(out.exitCode!==0)throw new Error('maintenance_inspect_failed');return JSON.parse(new TextDecoder().decode(out.stdout));
  }
- async checkpointArchive(){
+ async checkpointArchive():Promise<{ok:boolean;key:string;size:number;sha256:string;createdAt:string}>{
   if(!this.ctx.container?.running)throw new Error('checkpoint_requires_running');
-  const process=await this.ctx.container.exec(['node','--input-type=module','-e',`import{spawn}from'node:child_process';import{stat}from'node:fs/promises';import{createReadStream}from'node:fs';import{createHash}from'node:crypto';const child=spawn('node',['/app/openclaw.mjs','backup','create','--output','/home/node/checkpoints','--verify','--json'],{stdio:['ignore','pipe','ignore']});const closed=new Promise(r=>child.on('close',r));let data='';for await(const b of child.stdout)data+=b;const code=await closed;if(code!==0)throw Error('native_backup_failed');const b=JSON.parse(data);if(!b.verified||b.dryRun||b.onlyConfig||b.includeWorkspace!==true||!b.assets?.some(a=>a.kind==='state'&&a.sourcePath==='/home/node/.openclaw')||!b.archivePath?.startsWith('/home/node/checkpoints/'))throw Error('full_verified_backup_required');const size=(await stat(b.archivePath)).size;const h=createHash('sha256');for await(const data of createReadStream(b.archivePath))h.update(data);console.log(JSON.stringify({archivePath:b.archivePath,size,sha256:h.digest('hex'),createdAt:b.createdAt,verified:true}));`],{env:{HOME:'/home/node',OPENCLAW_STATE_DIR:'/home/node/.openclaw',...this.envVars},signal:AbortSignal.timeout(240000)});
+  const process=await this.#nativeExec(['node','--input-type=module','-e',`import{spawn}from'node:child_process';import{stat}from'node:fs/promises';import{createReadStream}from'node:fs';import{createHash}from'node:crypto';const child=spawn('node',['/app/openclaw.mjs','backup','create','--output','/home/node/checkpoints','--verify','--json'],{stdio:['ignore','pipe','ignore']});const closed=new Promise(r=>child.on('close',r));let data='';for await(const b of child.stdout)data+=b;const code=await closed;if(code!==0)throw Error('native_backup_failed');const b=JSON.parse(data);if(!b.verified||b.dryRun||b.onlyConfig||b.includeWorkspace!==true||!b.assets?.some(a=>a.kind==='state'&&a.sourcePath==='/home/node/.openclaw')||!b.archivePath?.startsWith('/home/node/checkpoints/'))throw Error('full_verified_backup_required');const size=(await stat(b.archivePath)).size;const h=createHash('sha256');for await(const data of createReadStream(b.archivePath))h.update(data);console.log(JSON.stringify({archivePath:b.archivePath,size,sha256:h.digest('hex'),createdAt:b.createdAt,verified:true}));`]);
   const out=await process.output();if(out.exitCode!==0)throw new Error('native_checkpoint_failed');
   const report=JSON.parse(new TextDecoder().decode(out.stdout));if(!report.size||report.size>2*1024*1024*1024)throw new Error('checkpoint_size_invalid');
   const key='backups/verified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.tar.gz';
   for(const destination of [key,'backups/latest.tar.gz']){
-   const copy=await this.ctx.container.exec(['cat',report.archivePath],{stderr:'ignore',signal:AbortSignal.timeout(240000)});
+   const copy=await this.#nativeExec(['cat',report.archivePath]);
    if(!copy.stdout)throw new Error('checkpoint_stream_missing');const stream=new FixedLengthStream(report.size);
    const [,stored,exitCode]=await Promise.all([copy.stdout.pipeTo(stream.writable),this.env.SOPSUTIL_DATA.put(destination,stream.readable,{sha256:report.sha256,customMetadata:{sha256:report.sha256,createdAt:report.createdAt}}),copy.exitCode]);
    if(exitCode!==0||!stored)throw new Error('checkpoint_stream_failed');
@@ -42,7 +47,7 @@ export class SopsutilContainer extends Container<Env>{
   }
   return {ok:true,key,size:report.size,sha256:report.sha256,createdAt:report.createdAt};
  }
- async checkpointAndStop(){const checkpoint=await this.checkpointArchive();await this.stop('SIGTERM');return checkpoint;}
+ async checkpointAndStop():Promise<unknown>{const checkpoint=await this.checkpointArchive();await this.stop('SIGTERM');return checkpoint;}
  async msteamsStatus(){const r=await this.containerFetch('http://localhost/msteams-status',{},18790);return r.json();}
  async checkpointAndRestart(){const r=await this.containerFetch('http://localhost/checkpoint',{method:'POST'},18790);if(!r.ok)throw new Error('checkpoint_required_before_restart');const result=await r.json();await this.stop('SIGTERM');return result;}
 }
