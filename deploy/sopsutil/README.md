@@ -78,12 +78,10 @@ existing default and per-agent selections, and existing aliases/settings. The on
 preference rewrite is the legacy hosted prefix `cloudflare/@cf/` to the isolated
 postpaid `cloudflare-workers/@cf/` route. Existing session overrides are not changed.
 
-Native Anthropic and OpenAI Codex enablement is explicitly user-authorized. If the
-default `modelPolicy` is absent, bootstrap converts the legacy alias-map restriction
-to explicit `allow` entries retaining every existing alias plus `anthropic/*` and
-`openai/*`. Existing nonempty default or per-agent `allow` lists gain only
-those two native prefixes; all other policy fields remain intact. Explicit empty
-policies stay unrestricted, and agents without their own policy keep inheriting.
+Model selection is unrestricted as explicitly requested. The live repair sets
+empty default and per-agent model policies. Bootstrap creates an explicit empty
+default policy when absent, so the Cloudflare alias map never becomes an implicit
+allowlist. It preserves any future policy deliberately authored by the user.
 This permits native catalog discovery but does not create credentials or prove a
 provider login succeeded. After an authorized policy/config change, use the native
 model picker **Refresh** or `models.list` with `refresh: true`; model and policy
@@ -103,4 +101,3 @@ probe and a no-delivery bot response, checkpoint and restore normal startup, the
 verify pairing, UI, health, and anonymous-tools denial. Model selection and managed
 inference do not authorize purchasing credits, enabling top-up, or changing plans.
 
-Model selection is unrestricted: the live repair clears the default and any existing per-agent model policy to explicit empty objects. Bootstrap does not turn the Cloudflare alias map into an allowlist and never reimposes a policy. Future explicit user-authored policies remain user-owned.
