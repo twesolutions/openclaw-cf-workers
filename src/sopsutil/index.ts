@@ -21,6 +21,8 @@ export class SopsutilContainer extends Container<Env>{
  }
  async diagnostics(){const r=await this.containerFetch('http://localhost/status',{},18790);return r.json();}
  async modelEnvironment(){return {containerRunning:this.ctx.container?.running??false,workerSecretPresent:!!this.env.SOPSUTIL_CF_AI_TOKEN,runtimeSecretPresent:!!this.envVars.CLOUDFLARE_AI_API_TOKEN,environmentNames:Object.keys(this.envVars)};}
+ async maintenancePaused():Promise<boolean>{return await this.ctx.storage.get('sopsutil-maintenance-paused')===true;}
+ async setMaintenancePaused(paused:boolean):Promise<void>{if(typeof paused!=='boolean')throw new Error('maintenance_pause_requires_boolean');await this.ctx.storage.put('sopsutil-maintenance-paused',paused);}
  async #nativeExec(args:string[],timeoutMS=240000){
   if(!this.ctx.container?.running)throw new Error('maintenance_requires_running');
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMS);
@@ -32,19 +34,27 @@ export class SopsutilContainer extends Container<Env>{
   const process=await this.#nativeExec(['node','--input-type=module','-e',`import{readFile,readdir,stat}from'node:fs/promises';import{spawnSync}from'node:child_process';const root='/home/node/.openclaw';const c=JSON.parse(await readFile(root+'/openclaw.json','utf8'));const backups=[];for(const name of await readdir('/home/node/checkpoints').catch(()=>[])){const s=await stat('/home/node/checkpoints/'+name);if(s.isFile())backups.push({name,size:s.size});}console.log(JSON.stringify({version:spawnSync('node',['/app/openclaw.mjs','--version'],{encoding:'utf8'}).stdout.trim(),node:process.version,primary:c.agents?.defaults?.model,reloadMode:c.gateway?.reload?.mode??'hybrid',backups}));`],60000);
   const out=await process.output();if(out.exitCode!==0)throw new Error('maintenance_inspect_failed');return JSON.parse(new TextDecoder().decode(out.stdout));
  }
- async checkpointArchive():Promise<{ok:boolean;key:string;size:number;sha256:string;createdAt:string}>{
+ async verifyDefaultModel():Promise<unknown>{
+  const process=await this.#nativeExec(['node','--input-type=module','-e',`import{spawn}from'node:child_process';async function cli(args){const c=spawn('node',['/app/openclaw.mjs',...args],{stdio:['ignore','pipe','ignore']});const closed=new Promise(r=>c.on('close',r));let s='';for await(const b of c.stdout){s+=b;if(s.length>4e6)throw Error('diagnostic_output_limit');}if(await closed!==0)throw Error('diagnostic_cli_failed');return JSON.parse(s);}const checked=await cli(['models','status','--agent','sopsutil','--probe','--probe-provider','cloudflare','--probe-timeout','30000','--probe-max-tokens','32','--json']);const results=checked.auth?.probes?.results??checked.probes?.results??[];const probe={defaultModel:checked.defaultModel,resolvedDefault:checked.resolvedDefault,targetCount:results.length,results:results.map(r=>({provider:r.provider,model:r.model,status:r.status,latencyMs:r.latencyMs}))};if(!results.length||results.some(r=>r.status!=='ok')){console.log(JSON.stringify({probe,botTurn:null}));process.exit(0);}const b=await cli(['agent','--agent','sopsutil','--session-id','6cf46b4a-d94b-433a-b604-02c164b46aef','--message','Diagnostic only: reply exactly SOPS_MODEL_OK. Do not call tools or send any message elsewhere.','--timeout','60','--json']);const r=b.result??b;const m=r.meta??b.meta??{};console.log(JSON.stringify({probe,botTurn:{ok:(r.payloads??b.payloads??[]).some(p=>p.text?.trim()==='SOPS_MODEL_OK'),provider:m.agentMeta?.provider??m.provider,model:m.agentMeta?.model??m.model,durationMs:m.durationMs,status:b.status}}));`],150000);
+  const out=await process.output();if(out.exitCode!==0)throw new Error('native_model_verification_failed');return JSON.parse(new TextDecoder().decode(out.stdout));
+ }
+ async checkpointArchive(preserve=true):Promise<{ok:boolean;key:string;size:number;sha256:string;createdAt:string}>{
   if(!this.ctx.container?.running)throw new Error('checkpoint_requires_running');
   const process=await this.#nativeExec(['node','--input-type=module','-e',`import{spawn}from'node:child_process';import{stat}from'node:fs/promises';import{createReadStream}from'node:fs';import{createHash}from'node:crypto';const child=spawn('node',['/app/openclaw.mjs','backup','create','--output','/home/node/checkpoints','--verify','--json'],{stdio:['ignore','pipe','ignore']});const closed=new Promise(r=>child.on('close',r));let data='';for await(const b of child.stdout)data+=b;const code=await closed;if(code!==0)throw Error('native_backup_failed');const b=JSON.parse(data);if(!b.verified||b.dryRun||b.onlyConfig||b.includeWorkspace!==true||!b.assets?.some(a=>a.kind==='state'&&a.sourcePath==='/home/node/.openclaw')||!b.archivePath?.startsWith('/home/node/checkpoints/'))throw Error('full_verified_backup_required');const size=(await stat(b.archivePath)).size;const h=createHash('sha256');for await(const data of createReadStream(b.archivePath))h.update(data);console.log(JSON.stringify({archivePath:b.archivePath,size,sha256:h.digest('hex'),createdAt:b.createdAt,verified:true}));`]);
   const out=await process.output();if(out.exitCode!==0)throw new Error('native_checkpoint_failed');
   const report=JSON.parse(new TextDecoder().decode(out.stdout));if(!report.size||report.size>2*1024*1024*1024)throw new Error('checkpoint_size_invalid');
-  const key='backups/verified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.tar.gz';
-  for(const destination of [key,'backups/latest.tar.gz']){
+  const key=preserve?'backups/verified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.tar.gz':'backups/latest.tar.gz';
+  for(const destination of preserve?[key,'backups/latest.tar.gz']:[key]){
    const copy=await this.#nativeExec(['cat',report.archivePath]);
    if(!copy.stdout)throw new Error('checkpoint_stream_missing');const stream=new FixedLengthStream(report.size);
    const [,stored,exitCode]=await Promise.all([copy.stdout.pipeTo(stream.writable),this.env.SOPSUTIL_DATA.put(destination,stream.readable,{sha256:report.sha256,customMetadata:{sha256:report.sha256,createdAt:report.createdAt}}),copy.exitCode]);
    if(exitCode!==0||!stored)throw new Error('checkpoint_stream_failed');
    const head=await this.env.SOPSUTIL_DATA.head(destination);if(head?.size!==report.size||head?.customMetadata?.sha256!==report.sha256)throw new Error('checkpoint_readback_failed');
   }
+  // Remove only the archive generated by this invocation, and only after every
+  // required R2 destination has passed size/digest metadata readback.
+  const cleanup=await this.#nativeExec(['node','--input-type=module','-e',`import{unlink}from'node:fs/promises';import{dirname}from'node:path';const path=process.argv[1];if(dirname(path)!=='/home/node/checkpoints')throw Error('checkpoint_cleanup_path_invalid');await unlink(path);`,report.archivePath]);
+  if(await cleanup.exitCode!==0)throw new Error('checkpoint_cleanup_failed');
   return {ok:true,key,size:report.size,sha256:report.sha256,createdAt:report.createdAt};
  }
  async checkpointAndStop():Promise<unknown>{const checkpoint=await this.checkpointArchive();await this.stop('SIGTERM');return checkpoint;}
@@ -55,6 +65,10 @@ SopsutilContainer.outboundByHost={
  'sopsutil-storage.internal':async(request,env:Env)=>{
   const path=new URL(request.url).pathname;
   if(path==='/models'&&request.method==='GET')return Response.json(modelConfig,{headers:{'Cache-Control':'no-store'}});
+  if(path==='/checkpoint-native'&&request.method==='POST'){
+   const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
+   return Response.json(await container.checkpointArchive(false));
+  }
   if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup'||path==='/gh'||path==='/msteams')){
    const key=path==='/msteams'?'bootstrap/openclaw-msteams-2026.9.3-bundle.tgz':path==='/gh'?'bootstrap/gh-2.100.0-linux-amd64':path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
    const object=await env.SOPSUTIL_DATA.get(key);return object?new Response(object.body,{headers:{'Cache-Control':'no-store'}}):new Response('Missing',{status:404});
@@ -99,9 +113,11 @@ export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {acce
  }
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
+ if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
  try{
   try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});}catch(first){
    if(!/not running/i.test(first instanceof Error?first.message:''))throw first;
+   if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
    await container.start();
    await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:180000,instanceGetTimeoutMS:60000}});
   }

@@ -1,3 +1,5 @@
+> Recovery deployment: OpenClaw 2026.9.3 with its matching pre-upgrade archive. The 2026.11.1 preparation is retained at commit51a36d7; Teams state-ownership migration must be resolved before promotion. Native streaming checkpoints and the private maintenance gate remain enabled.
+
 # Isolated SopsUtil OpenClaw deployment
 
 This additive deployment leaves the original template and existing Cloudflare SOC resources alone.

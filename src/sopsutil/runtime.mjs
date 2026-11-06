@@ -9,7 +9,7 @@ const cli='/app/openclaw.mjs';
 const TWE_MEMBER_OBJECT_IDS=["0ba3858b-543d-414f-b735-5a1437fb882e","147d4c18-e7a2-42c8-93c7-0893cb76daa7","175241ec-a658-436d-82ed-af71dd02e11c","1a268372-f91e-4cb4-a44b-1885dd0b7e15","1d287c2d-be09-41aa-88b1-d502e35c91c8","2254960f-fe11-4165-bbe6-ee0136ff582c","24cac8f5-90a7-4b6c-844c-3795fb690c95","27eba615-8933-4d4e-9d26-498bcc3d61d1","298f9c79-bc7a-4702-ba6d-5acb909cbd79","2d529fd0-fd3a-4b07-b5fc-fcd519efcf90","2eee64a4-183f-487b-a976-15eed665771c","34c327b2-d179-4e07-8e21-c4913c6d2ffa","391e7a2a-19ea-44ff-8061-b2f753cc885d","4056c4f2-af3f-452c-b50c-e43bbc301867","40fade42-566f-4fab-8b15-b4ea4ce50238","42c5f73d-81b0-4f2d-bf5d-6f5262da7b13","43cbf298-04a1-4c55-a42b-9ebfa46810a4","4a62a7ac-d85d-4783-b7c3-e4af3eb86ed1","5244db03-e763-49e4-9163-bf9fd0e3b908","54357709-dae5-41f4-83ce-60d94161752b","587350a4-443d-422a-8df9-7403cec7b3eb","5d38cffb-5a06-4bb9-8c9f-a9e038eb3c3c","5f2c36fe-6913-4334-ad6a-b134584bacc0","624d1493-c251-4b56-995a-1ccb60a8d431","664e4170-ee00-474b-9304-d045ad4acb8c","68fc4822-4d27-410a-affd-d75009e97dcf","6cef8273-3e86-48af-8b30-6bf4b9cc19c1","6f48ab3c-a5e8-4fb1-8f16-00ac3c9cf0ff","7644ec1e-8baf-44ca-85e4-b88a46a8d402","7797cb12-8511-4891-878d-1f538c3670da","78bc99e1-47cd-4fb6-bc06-171b26eae4f3","7b1b431e-9484-4cbe-aea6-3fd769c5d87c","7f08a0f7-68d5-4702-8f28-f0d06bb7d2b6","80da54cc-a71c-4e9b-a4dd-e863432ba349","816b405e-7f5e-431d-8b7a-8b24ccc5df88","817a8b53-162a-409e-90b2-0cf1b84a8260","850ae75c-b968-4e15-ab0d-a975fbeef712","86771d02-aad8-4cfb-9ab8-9adb4f9187bb","8db48ed1-a93f-451e-b198-119aee86c716","98a17a7f-ddb2-40a1-91ea-3157d7768989","a054cd45-7f8a-4127-8664-2a0e29a0686a","a2ce053c-624e-4ba4-8ce2-8998b2985adb","a4d1a348-6931-41de-b185-37bdd7e02bab","a8171ced-255d-433f-918b-abfc47e14bd3","aa5ea7b9-01bc-4048-a2fa-c07fc9ee2b62","abcd81b0-bdbf-41bb-bd9e-dad1f2ec533e","abebcc68-42a2-4613-814f-06477ece2afd","b1367128-b270-43cb-85e1-b116418c3c59","b2aaa4f7-2ab6-470e-a820-b037d747ff11","b8e99ea7-dcf7-4968-b02e-d1e01dad0646","b9cd6fc1-b840-4667-8ba9-a19432cb06fc","bb176dd3-ffea-4dd8-90a6-b6a622668836","bc3101c5-b73a-4839-ade4-af22aff6182d","bf385f2c-c8f4-4670-869a-ba87ed4c5c3a","c399f068-9a87-46a7-b767-c5fc21f29395","c55b081f-def8-4240-bb79-d87c41ebbf10","c564235d-5d60-49c1-9db1-bf18f605adf3","c8c01021-7ae5-4f77-8a73-5187f853fbca","cadf034d-a193-4eab-bca4-8b9a000ea9d4","d09dfb37-2b00-4dd1-a915-420837f22082","d8d3a5b2-83a1-4000-8cb5-d4b09b3d5594","da0e449f-cba3-4767-a6a3-4ace4edaae9b","e61f05c0-3554-44d6-8b56-343a3ad3c863","e9d99f9b-1a07-4455-89e6-e608476193cf","ed579850-ba95-4166-9fad-c9af2b1f0732","f195b625-f695-4c86-ab4b-d15e834dad8f","f49469c3-6ddb-4078-8e8c-d190ef9189e2","f5517bef-b880-47dd-81ce-4a8a81542554","f86472cc-cb23-4755-b404-d85e774067bb","fb03153c-119d-40ef-8581-4252c816a5ba","fcecf509-9ec4-4fce-9d99-27280b92b09c","fd43c5d4-f7f1-43e5-8352-1eb2e9edd5be","fd710b1d-9758-4b80-b7d7-76cba14e9c57","fe32ef99-11f3-45ef-b93d-d38de9090276","fe85723c-ffca-4e9c-941a-70fae9b629a7","fea6df3d-158c-49bb-9f35-df7dc1e2c7ae","ff957d74-f696-42cb-8741-c27f42c9fe44"];
 let ghVersion=null;
 let gateway, checkpointing=false, lastBackup=null, failure=null, shuttingDown=false;
-function run(args){return new Promise((res,rej)=>{const child=spawn('node',[cli,...args],{stdio:['ignore','pipe','pipe']});let output='',errors='';child.stdout.on('data',b=>{output+=b;if(output.length>4e6)child.kill();});child.stderr.on('data',b=>{errors=(errors+b).slice(-2000);});child.on('error',rej);child.on('close',code=>code===0?res(output):rej(new Error(('cli_failed_'+args[0]+'_'+code+' '+errors).replace(/https?:\/\/\S+/g,'[url]').slice(0,1000))));});}
+function run(args,{capture=true}={}){return new Promise((res,rej)=>{const child=spawn('node',[cli,...args],{stdio:['ignore','pipe','pipe']});let output='',errors='',outputLimit=false;child.stdout.on('data',b=>{if(!capture)return;output+=b;if(output.length>4e6){outputLimit=true;child.kill();}});child.stderr.on('data',b=>{errors=(errors+b).slice(-2000);});child.on('error',rej);child.on('close',code=>code===0?res(output):rej(new Error(((outputLimit?'cli_output_limit_':'cli_failed_')+args[0]+'_'+code+' '+errors).replace(/https?:\/\/\S+/g,'[url]').slice(0,1000))));});}
 async function request(path,init){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(240000)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
 async function configureModels(config){
  if(!process.env.CLOUDFLARE_AI_API_TOKEN)throw new Error('cloudflare_inference_secret_required');
@@ -32,7 +32,7 @@ async function diagnostic(stage){try{await request('/diagnostic',{method:'PUT',b
 async function restore(){
  const r=await request('/backup');if(r.status===404)return;
  const archive='/home/node/restore.tar.gz';await writeFile(archive,Buffer.from(await r.arrayBuffer()),{mode:0o600});
- const target='/home/node/restore-stage';await run(['backup','restore',archive,'--target',target,'--json']);
+ const target='/home/node/restore-stage';await run(['backup','restore',archive,'--target',target,'--json'],{capture:false});
  const roots=await readdir(target);if(roots.length!==1)throw new Error('restore_root_count');
  const manifest=JSON.parse(await readFile(join(target,roots[0],'manifest.json'),'utf8'));
  const asset=manifest.assets.find(a=>a.kind==='state');if(!asset||asset.sourcePath!==root)throw new Error('restore_state_identity');
@@ -45,14 +45,11 @@ async function restore(){
 }
 async function checkpoint(){
  if(checkpointing)throw new Error('checkpoint_busy');checkpointing=true;
- const out='/home/node/checkpoints';
  try{
-  await mkdir(out,{recursive:true,mode:0o700});
-  const report=JSON.parse(await run(['backup','create','--output',out,'--verify','--json']));
-  const file=report.archivePath;if(typeof file!=='string'||!file.startsWith(out+'/'))throw new Error('backup_path');
-  if((await stat(file)).size>90*1024*1024)throw new Error('backup_size_limit');
-  await request('/backup',{method:'PUT',body:await readFile(file)});await rm(file);lastBackup=new Date().toISOString();failure=null;
-  console.log('checkpoint_uploaded');return {ok:true,lastBackup};
+  const response=await request('/checkpoint-native',{method:'POST'});const report=await response.json();
+  if(report.ok!==true||report.key!=='backups/latest.tar.gz'||!Number.isSafeInteger(report.size)||report.size<=0||!/^[a-f0-9]{64}$/.test(report.sha256)||typeof report.createdAt!=='string'||!Number.isFinite(Date.parse(report.createdAt)))throw new Error('checkpoint_metadata_invalid');
+  lastBackup=report.createdAt;failure=null;
+  console.log('checkpoint_uploaded');return {...report,lastBackup};
  }catch(e){failure=e.message;throw e;}finally{checkpointing=false;}
 }
 async function installGitHubCli(){
@@ -72,7 +69,7 @@ async function main(){
  const pluginDir=join(root,'extensions','msteams');
  const pluginMarker=join(root,'.bootstrap','msteams-native-install-2026.9.3');
  let nativeInstalled=false;
- try{await stat(pluginMarker);const p=JSON.parse(await run(['plugins','inspect','msteams','--json']));nativeInstalled=p.install?.source==='npm'&&p.install?.version==='2026.9.3'&&p.plugin?.trustedOfficialInstall===true;}catch{}
+ try{await stat(pluginMarker);const p=JSON.parse(await run(['plugins','inspect','msteams','--json']));nativeInstalled=p.install?.source==='npm'&&p.install?.version==='2026.9.3'&&p.plugin?.trustedOfficialInstall===true&&p.plugin?.dependencyStatus?.requiredInstalled!==false;}catch{}
  if(!nativeInstalled){
   // A restored configured channel can require consent before the install CLI
   // gets a chance to record it. Disable that incomplete copy for this one run.
