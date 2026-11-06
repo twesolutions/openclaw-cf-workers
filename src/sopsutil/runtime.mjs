@@ -28,7 +28,39 @@ async function configureModels(config){
   else agent.model={...agent.model,primary:route(agent.model.primary??fragment.agents.defaults.model.primary),fallbacks:(agent.model.fallbacks??[]).map(route)};
  }
 }
-async function diagnostic(stage){try{await request('/diagnostic',{method:'PUT',body:JSON.stringify({at:new Date().toISOString(),stage})});}catch{}}
+function redactDiagnostic(value){
+ let text=String(value).replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');
+ for(const [key,secret]of Object.entries(process.env))if(secret&&/PASSWORD|TOKEN|SECRET|API_KEY|PRIVATE_KEY|CERTIFICATE|CREDENTIAL/i.test(key)){
+  for(const form of new Set([secret,encodeURIComponent(secret),JSON.stringify(secret).slice(1,-1)]))if(form)text=text.split(form).join('[redacted]');
+ }
+ return text.replace(/\b(?:https?|wss?):\/\/[^\s"'<>]+/gi,'[url]')
+  .replace(/\bBearer\s+[^\s"'<>]+/gi,'Bearer [redacted]')
+  .replace(/\b(?:sk-[A-Za-z0-9_-]+|gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/g,'[redacted]')
+  .replace(/(["']?\b[A-Za-z0-9_-]*(?:api[-_ ]?key|token|password|secret|authorization|credential)[A-Za-z0-9_-]*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,'$1[redacted]')
+  .replace(/[A-Za-z0-9_+\/=\-]{40,}/g,'[opaque-token]');
+}
+async function diagnostic(stage,details={}){
+ const controller=new AbortController();let timer;
+ try{await Promise.race([(async()=>{
+  let openclawVersion='unavailable';try{openclawVersion=JSON.parse(await readFile('/app/package.json','utf8')).version??'unavailable';}catch{}
+  const report={at:new Date().toISOString(),openclawVersion,nodeVersion:process.version,stage,...details};
+  for(const key of Object.keys(report))if(typeof report[key]==='string')report[key]=redactDiagnostic(report[key]);
+  while(Buffer.byteLength(JSON.stringify(report))>4096){const key=Object.keys(report).filter(key=>typeof report[key]==='string').sort((a,b)=>report[b].length-report[a].length)[0];report[key]=report[key].slice(Math.max(1,Math.ceil(report[key].length/4)));}
+  await fetch(storage+'/diagnostic',{method:'PUT',body:JSON.stringify(report),signal:controller.signal});
+ })(),new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve();},2000);})]);}catch{}finally{clearTimeout(timer);}
+}
+function watchGateway(child,started){
+ let tail=Buffer.alloc(0),finishing=false;
+ const remember=data=>{tail=Buffer.concat([tail,Buffer.from(data)]).subarray(-16384);};
+ child.stdout.on('data',remember);child.stderr.on('data',remember);
+ child.on('error',error=>remember('gateway_spawn_error '+error.message));
+ const finish=async(code,signal)=>{
+  if(shuttingDown||finishing)return;finishing=true;
+  await started;await diagnostic('gateway_exited',{code:code??null,signal:signal??null,tail:tail.toString('utf8')});
+  process.exit(code??1);
+ };
+ child.once('exit',finish);child.once('close',finish);
+}
 async function restore(){
  const r=await request('/backup');if(r.status===404)return;
  const archive='/home/node/restore.tar.gz';await writeFile(archive,Buffer.from(await r.arrayBuffer()),{mode:0o600});
@@ -136,9 +168,9 @@ async function main(){
    res.statusCode=404;res.end('{}');
   }catch{res.statusCode=503;res.end(JSON.stringify({error:'operation_failed'}));}
  });server.listen(18790,'0.0.0.0');
- gateway=spawn('node',[cli,'gateway','--bind','lan','--port','18789'],{stdio:'inherit'});await diagnostic('gateway_spawned');
- gateway.on('exit',code=>{if(!shuttingDown)process.exit(code??1);});
+ gateway=spawn('node',[cli,'gateway','--bind','lan','--port','18789'],{stdio:['ignore','pipe','pipe']});
+ const started=diagnostic('gateway_spawned');watchGateway(gateway,started);await started;
  const timer=setInterval(()=>checkpoint().catch(()=>console.error('checkpoint_failed')),300000);timer.unref();
  for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{if(shuttingDown)return;shuttingDown=true;clearInterval(timer);gateway.kill('SIGTERM');await new Promise(r=>gateway.once('exit',r));try{await checkpoint();}catch{console.error('final_checkpoint_failed');process.exit(1);}server.close();process.exit(0);});
 }
-main().catch(async e=>{console.error('bootstrap_failed',e.message);try{await request('/diagnostic',{method:'PUT',body:JSON.stringify({at:new Date().toISOString(),message:String(e?.message??e).slice(0,1000)})});}catch{}process.exit(1);});
+main().catch(async e=>{console.error('bootstrap_failed');await diagnostic('bootstrap_failed',{message:String(e?.message??e)});process.exit(1);});
