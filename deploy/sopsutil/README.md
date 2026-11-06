@@ -12,7 +12,7 @@ This additive deployment leaves the original template and existing Cloudflare SO
 - Version previews are disabled and the Worker rejects alternate origins. Keep both canonical and legacy hostnames in the same narrow hostname-based Access application and in the applicable One Client split-tunnel includes; legacy browser redirects require the same native Access audience. Use hostname-based Access, not Worker-level Access, which currently breaks WebSockets. No public restart route exists.
 - The exact legacy `POST https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev/api/messages` webhook retains separate Microsoft Bot Framework token validation on port 3978, behind path-specific Access application `79edb74f-e455-4d6b-a928-20afe672397f`. Its Access bypass is not a browser or Gateway API exception and does not extend to the new canonical hostname. Missing Bearer, other methods, query strings, non-JSON and oversized declared bodies are rejected at the Worker before container startup. Leave Microsoft's registered webhook address unchanged.
 - Private R2 bucket `sopsutil-openclaw-dev-data`. No public bucket.
-- Runtime receives the Gateway password only. It does NOT receive the Cloudflare account token or R2 credentials. Container-only outbound interception accesses the narrowly defined R2 objects through Worker bindings.
+- Runtime receives the Gateway password, the existing Teams certificate, and a dedicated Workers AI Read-only inference token. It does NOT receive the Cloudflare management token or R2 credentials. Container-only outbound interception accesses narrowly defined R2 objects and the checked-in model catalog through Worker bindings.
 - Git/SQLite/config live on local disk. Native verified OpenClaw archives are uploaded every five minutes and before idle shutdown. Restore runs before the Gateway. Failed backup prevents deliberate idle shutdown. Unexpected termination can lose up to the last successful backup; this is not synchronous durable storage.
 - Backup object size limit is 90 MiB. Node modules and build outputs can exhaust that limit; validate the actual archive behavior before sustained development. Verified native archive creation/upload and a checkpoint-protected container restart on 2026-09-11; abrupt-loss recovery and sustained development capacity are not yet proven.
 - Runtime internal service on 18790 is never publicly routed; only 18789 is proxied. It exposes bounded status, checkpoint and device-list operations for deployment diagnostics.
@@ -38,3 +38,33 @@ npx wrangler deploy --config deploy/sopsutil/wrangler.jsonc
 ```
 
 Verify anonymous/forged-context denial, One Client off denial, allowed Microsoft-user access with the TWE One Client on, WebSockets, unsigned Teams denial, actual JSON health responses, password/device pairing, source/knowledge presence, backups, and a real model response before declaring end-to-end development readiness. A successful Worker upload alone is not deployment completion. Reconnect One Client to receive updated split-tunnel hostname includes. Preserve existing profile match, precedence, private routes, and fallback domains.
+
+## Cloudflare model access
+
+`SOPSUTIL_CF_AI_TOKEN` is a protected Worker secret containing an account-scoped
+**Workers AI Read** token, not the operator's management token. The runtime receives
+it as `CLOUDFLARE_AI_API_TOKEN`; OpenClaw configuration contains only its environment
+SecretRef. Requests use the existing `default` AI Gateway and the unified Cloudflare
+`/accounts/<account>/ai/v1` endpoint. No direct upstream API key is needed.
+
+`models.json` is the reviewed catalog source of truth: all current standard
+language models from Cloudflare's third-party and hosted catalogs, using their
+native Responses, Messages, or Chat Completions adapters. Image/audio/video,
+moderation, and structured-decision-only endpoints are not chatbot selections.
+The current inventory is 114 models. Default: GPT-5.6 Sol; fallback: hosted GLM 5.3.
+The Cloudflare-only allowlist replaces direct model routes while preserving other
+agent, Gateway, Teams, browser-pairing and workspace settings. Existing session
+model overrides are migrated with native `sessions.patch`, not database edits.
+
+To refresh the catalog, read `/ai/catalog/models` (paginated) and `/ai/models/search`
+with an authorized operator credential, then run:
+
+```sh
+node scripts/build-sopsutil-models.mjs external.json workers.json deploy/sopsutil/models.json
+node --test test/sopsutil-models.test.mjs test/sopsutil-runtime-models.test.mjs
+```
+
+Deploy the exact reviewed source, checkpoint before restart, verify native provider
+probe and a no-delivery bot response, checkpoint and restore normal startup, then
+verify pairing, UI, health, and anonymous-tools denial. Model selection and managed
+inference do not authorize purchasing credits, enabling top-up, or changing plans.

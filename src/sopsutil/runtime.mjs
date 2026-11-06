@@ -11,6 +11,23 @@ let ghVersion=null;
 let gateway, checkpointing=false, lastBackup=null, failure=null, shuttingDown=false;
 function run(args){return new Promise((res,rej)=>{const child=spawn('node',[cli,...args],{stdio:['ignore','pipe','pipe']});let output='',errors='';child.stdout.on('data',b=>{output+=b;if(output.length>4e6)child.kill();});child.stderr.on('data',b=>{errors=(errors+b).slice(-2000);});child.on('error',rej);child.on('close',code=>code===0?res(output):rej(new Error(('cli_failed_'+args[0]+'_'+code+' '+errors).replace(/https?:\/\/\S+/g,'[url]').slice(0,1000))));});}
 async function request(path,init){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(240000)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
+async function configureModels(config){
+ if(!process.env.CLOUDFLARE_AI_API_TOKEN)throw new Error('cloudflare_inference_secret_required');
+ const response=await request('/models');if(response.status===404)throw new Error('cloudflare_model_catalog_missing');
+ const fragment=await response.json();const providers=fragment.models?.providers??{};
+ const bases={cloudflare:'https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai/v1','cloudflare-messages':'https://api.cloudflare.com/client/v4/accounts/6eef883dec740547667d5a2522924a3b/ai'};
+ if(!providers.cloudflare||Object.entries(providers).some(([id,p])=>!Object.hasOwn(bases,id)||p.baseUrl!==bases[id]||!p.models?.length||p.apiKey?.source!=='env'||p.apiKey?.id!=='CLOUDFLARE_AI_API_TOKEN'||(id==='cloudflare-messages'&&p.authHeader!==true)))throw new Error('cloudflare_model_catalog_invalid');
+ config.models=fragment.models;
+ config.agents??={};config.agents.defaults={...config.agents.defaults,...fragment.agents.defaults};
+ // Preserve per-agent preferences, mapping only exact known catalog models to
+ // the Cloudflare route; unknown old direct routes use the verified default.
+ const allowed=new Set(Object.keys(fragment.agents.defaults.models));
+ const route=ref=>allowed.has(ref)?ref:[...allowed].find(key=>key.endsWith('/'+ref))??fragment.agents.defaults.model.primary;
+ for(const agent of Object.values(config.agents.entries??{}))if(agent.model){
+  if(typeof agent.model==='string')agent.model=route(agent.model);
+  else agent.model={...agent.model,primary:route(agent.model.primary??fragment.agents.defaults.model.primary),fallbacks:(agent.model.fallbacks??[]).map(route)};
+ }
+}
 async function diagnostic(stage){try{await request('/diagnostic',{method:'PUT',body:JSON.stringify({at:new Date().toISOString(),stage})});}catch{}}
 async function restore(){
  const r=await request('/backup');if(r.status===404)return;
@@ -105,11 +122,14 @@ async function main(){
  config.channels??={};
  config.channels.msteams={...(config.channels.msteams??{}),enabled:true,appId:'16d7d6d1-a6ec-4de8-a0b8-cd5e3d083682',tenantId:'ca9f5f30-4e27-43e6-a6dc-097d9877bd7a',authType:'federated',certificatePath:join(root,'certs','sopsutil-teams','bot.pem'),dmPolicy:'allowlist',allowFrom:TWE_MEMBER_OBJECT_IDS,groupPolicy:'disabled',configWrites:false,dangerouslyAllowNameMatching:false,historyLimit:0,dmHistoryLimit:10,graphMediaFallback:false,mediaAllowHosts:[],mediaAuthAllowHosts:[],typingIndicator:false,welcomeCard:false,groupWelcomeCard:false,feedbackEnabled:false,feedbackReflection:false,sso:{enabled:false},delegatedAuth:{enabled:false,scopes:[]},webhook:{port:3978,path:'/api/messages'}};
  config.bindings=[...(config.bindings??[]).filter(b=>!(b?.match?.channel==='msteams')),{type:'route',agentId:'sopsutil',comment:'Route Teams personal messages to the existing SopsUtil agent',match:{channel:'msteams',accountId:'*'},session:{dmScope:'per-account-channel-peer'}}];
+ await configureModels(config);
  await writeFile(configPath,JSON.stringify(config,null,2),{mode:0o600});await run(['config','validate']);await diagnostic('config_ready');
  const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');
   try{
    if(req.url==='/status'&&req.method==='GET'){res.end(JSON.stringify({ok:true,lastBackup,failure,checkpointing,ghVersion,proxyPeer:req.socket.remoteAddress}));return;}
+   if(req.url==='/model-status'&&req.method==='GET'){res.end(JSON.stringify({primary:config.agents.defaults.model,providers:Object.keys(config.models.providers),models:Object.entries(config.models.providers).flatMap(([provider,p])=>p.models.map(m=>({provider,id:m.id,api:m.api}))),allowedCount:Object.keys(config.agents.defaults.models).length,baseUrl:config.models.providers.cloudflare.baseUrl,credentialSource:config.models.providers.cloudflare.apiKey,credentialPresent:!!process.env.CLOUDFLARE_AI_API_TOKEN}));return;}
+   if(req.url==='/model-report'&&req.method==='GET'){try{res.end(await readFile(join(root,'.bootstrap','cloudflare-model-report.json'),'utf8'));}catch{res.statusCode=404;res.end('{}');}return;}
    if(req.url==='/msteams-status'&&req.method==='GET'){
     const inspected=JSON.parse(await run(['plugins','inspect','msteams','--json']));const status=JSON.parse(await run(['channels','status','--json']));const channel=status.channels?.msteams;const accounts=status.channelAccounts?.msteams;
     res.end(JSON.stringify({plugin:{id:inspected.plugin?.id,version:inspected.plugin?.version,status:inspected.plugin?.status,activated:inspected.plugin?.activated,imported:inspected.plugin?.imported,dependenciesInstalled:inspected.plugin?.dependencyStatus?.requiredInstalled},install:{source:inspected.install?.source,version:inspected.install?.version,resolvedName:inspected.install?.resolvedName},channel,accounts}));return;

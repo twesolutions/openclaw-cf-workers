@@ -1,8 +1,9 @@
 import {Container,getContainer,ContainerProxy,switchPort} from '@cloudflare/containers';
 import runtime from './runtime.mjs';
+import modelConfig from '../../deploy/sopsutil/models.json';
 import {hasApplicationAccess} from './access';
 export {ContainerProxy};
-interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_ACCESS_AUD?:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
+interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_ACCESS_AUD?:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_CF_AI_TOKEN?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
 const LEGACY_ORIGIN='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
@@ -10,7 +11,7 @@ export class SopsutilContainer extends Container<Env>{
  pingEndpoint='localhost/healthz';
  sleepAfter='15m';
  entrypoint=['node','--input-type=module','-e',runtime];
- envVars={PUBLIC_ORIGIN:this.env.PUBLIC_ORIGIN,OPENCLAW_GATEWAY_PASSWORD:this.env.SOPSUTIL_CF_GATEWAY_PASSWORD??'',SOPSUTIL_TEAMS_CERTIFICATE_B64:this.env.SOPSUTIL_TEAMS_CERTIFICATE_B64??''};
+ envVars={PUBLIC_ORIGIN:this.env.PUBLIC_ORIGIN,OPENCLAW_GATEWAY_PASSWORD:this.env.SOPSUTIL_CF_GATEWAY_PASSWORD??'',CLOUDFLARE_AI_API_TOKEN:this.env.SOPSUTIL_CF_AI_TOKEN??'',SOPSUTIL_TEAMS_CERTIFICATE_B64:this.env.SOPSUTIL_TEAMS_CERTIFICATE_B64??''};
  async onActivityExpired(){
   // Keep running if the checkpoint is unavailable; never deliberately sleep
   // with unsaved SQLite, configuration, or workspace state.
@@ -25,6 +26,7 @@ export class SopsutilContainer extends Container<Env>{
 SopsutilContainer.outboundByHost={
  'sopsutil-storage.internal':async(request,env:Env)=>{
   const path=new URL(request.url).pathname;
+  if(path==='/models'&&request.method==='GET')return Response.json(modelConfig,{headers:{'Cache-Control':'no-store'}});
   if(request.method==='GET'&&(path==='/seed'||path==='/source'||path==='/backup'||path==='/gh'||path==='/msteams')){
    const key=path==='/msteams'?'bootstrap/openclaw-msteams-2026.9.3-bundle.tgz':path==='/gh'?'bootstrap/gh-2.100.0-linux-amd64':path==='/seed'?'bootstrap/seed.json':path==='/source'?'bootstrap/source.bundle':'backups/latest.tar.gz';
    const object=await env.SOPSUTIL_DATA.get(key);return object?new Response(object.body,{headers:{'Cache-Control':'no-store'}}):new Response('Missing',{status:404});
