@@ -1463,7 +1463,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "cloudflare/openai/gpt-5.6-sol",
+        "primary": "cloudflare/openai/gpt-6.1-sol",
         "fallbacks": [
           "cloudflare/@cf/zai-org/glm-5.3"
         ]

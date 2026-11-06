@@ -2,7 +2,7 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 
 export const ACCOUNT_ID='6eef883dec740547667d5a2522924a3b';
-export const PRIMARY='cloudflare/openai/gpt-5.6-sol';
+export const PRIMARY='cloudflare/openai/gpt-6.1-sol';
 export const FALLBACK='cloudflare/@cf/zai-org/glm-5.3';
 const positive=value=>Number.isFinite(Number(value))&&Number(value)>0?Math.floor(Number(value)):undefined;
 const normalize=value=>String(value).toLowerCase().replace(/[^a-z0-9]/g,'');

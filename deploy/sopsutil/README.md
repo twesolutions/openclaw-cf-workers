@@ -51,7 +51,7 @@ SecretRef. Requests use the existing `default` AI Gateway and the unified Cloudf
 language models from Cloudflare's third-party and hosted catalogs, using their
 native Responses, Messages, or Chat Completions adapters. Image/audio/video,
 moderation, and structured-decision-only endpoints are not chatbot selections.
-The current inventory is 114 models. Default: GPT-5.6 Sol; fallback: hosted GLM 5.3.
+The current inventory is 114 models. Default: GPT-6.1 Sol; fallback: hosted GLM 5.3.
 The Cloudflare-only allowlist replaces direct model routes while preserving other
 agent, Gateway, Teams, browser-pairing and workspace settings. Existing session
 model overrides are migrated with native `sessions.patch`, not database edits.
