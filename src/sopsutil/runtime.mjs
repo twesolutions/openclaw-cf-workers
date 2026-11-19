@@ -36,7 +36,7 @@ function run(args,{capture=true}={}){
   child.on('error',error=>finish(null,null,error));child.on('close',(code,signal)=>finish(code,signal));
  });
 }
-async function request(path,init){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(240000)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
+async function request(path,init,timeoutMS=240000){const r=await fetch(storage+path,{...init,signal:AbortSignal.timeout(timeoutMS)});if(!r.ok&&r.status!==404)throw new Error('storage_http_'+r.status);return r;}
 async function configureModels(config){
  if(!process.env.CLOUDFLARE_AI_API_TOKEN)throw new Error('cloudflare_inference_secret_required');
  const response=await request('/models');if(response.status===404)throw new Error('cloudflare_model_catalog_missing');
@@ -97,7 +97,7 @@ function watchGateway(child,started){
  child.once('exit',finish);child.once('close',finish);
 }
 async function restore(){
- const r=await request('/backup');if(r.status===404)return;
+ const r=await request('/backup',undefined,900000);if(r.status===404)return;
  const archive='/home/node/restore.tar.gz';await writeFile(archive,Buffer.from(await r.arrayBuffer()),{mode:0o600});
  const target='/home/node/restore-stage';await run(['backup','restore',archive,'--target',target,'--json'],{capture:false});
  const roots=await readdir(target);if(roots.length!==1)throw new Error('restore_root_count');
@@ -113,7 +113,7 @@ async function restore(){
 async function checkpoint(){
  if(checkpointing)throw new Error('checkpoint_busy');checkpointing=true;
  try{
-  const response=await request('/checkpoint-native',{method:'POST'});const report=await response.json();
+  const response=await request('/checkpoint-native',{method:'POST'},1200000);const report=await response.json();
   if(report.ok!==true||report.key!=='backups/latest.tar.gz'||!Number.isSafeInteger(report.size)||report.size<=0||!/^[a-f0-9]{64}$/.test(report.sha256)||typeof report.createdAt!=='string'||!Number.isFinite(Date.parse(report.createdAt)))throw new Error('checkpoint_metadata_invalid');
   lastBackup=report.createdAt;failure=null;
   console.log('checkpoint_uploaded');return {...report,lastBackup};

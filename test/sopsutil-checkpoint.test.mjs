@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {test} from 'node:test';
+import {test,mock} from 'node:test';
 import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 const bundle=await build({entryPoints:['src/sopsutil/index.ts'],bundle:true,write:false,format:'esm',plugins:[{name:'container-stub',setup(b){b.onResolve({filter:/^@cloudflare\/containers$/},()=>({path:'container',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:'export class Container{constructor(){this.env={};}};export class ContainerProxy{};export function getContainer(namespace,name){if(name!=="sopsutil-development")throw Error("wrong container");return namespace.stub;};export function switchPort(){};'}));b.onLoad({filter:/\/sopsutil\/runtime\.mjs$/},()=>({contents:'export default "not-executed";'}));}}]});
@@ -23,3 +23,18 @@ test('account-only maintenance pause persists exact booleans without starting or
 test('structured native CLI failure never publishes an archive or stops the bot',async()=>{const {c,calls,stored}=setup({backupError:{error:'native_backup_cli_failed',code:143,stderr:'operational error'}});await assert.rejects(c.checkpointAndStop(),/native_backup_cli_failed/);assert.equal(stored.size,0);assert.ok(!calls.some(x=>x.stop||x.args?.[0]==='cat'));});
 
 test('native checkpoint creates the output directory and preserves an earlier file collision before backup',async()=>{const {c,calls}=setup();await c.checkpointArchive();const script=calls[0].args[3];assert.ok(script.indexOf('await mkdir(directory')<script.indexOf("const child=spawn"));assert.ok(script.includes("await rename(directory,'/home/node/checkpoints-preserved-'"));});
+
+test('native full backup creation keeps a 15-minute budget beyond the former 240s abort',async()=>{
+ mock.timers.enable({apis:['setTimeout']});
+ try{
+  let signal,finish;const done=new Promise(resolve=>finish=resolve);
+  const c=new SopsutilContainer();c.env={};
+  c.ctx={container:{running:true,async exec(args,options){signal=options.signal;return {exitCode:new Promise(()=>{}),async output(){await done;return {exitCode:1,stdout:Buffer.from('{}')};}};}}};
+  const pending=c.checkpointArchive().catch(e=>e);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(signal);mock.timers.tick(240001);assert.equal(signal.aborted,false);
+  mock.timers.tick(900000-240001-1);assert.equal(signal.aborted,false);
+  mock.timers.tick(2);assert.equal(signal.aborted,true);
+  finish();assert.match((await pending).message,/native_checkpoint_failed/);
+ }finally{mock.timers.reset();}
+});

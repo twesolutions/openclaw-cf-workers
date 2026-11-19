@@ -11,7 +11,7 @@ function setup(request){
  return {state,checkpoint:vm.runInNewContext('('+fn+')',state)};
 }
 test('runtime delegates over-90MiB checkpoints to native streaming without buffering files',async()=>{
- const {state,checkpoint}=setup(async(path,options)=>{assert.equal(path,'/checkpoint-native');assert.deepEqual({...options},{method:'POST'});return {json:async()=>report};});
+ const {state,checkpoint}=setup(async(path,options,timeoutMS)=>{assert.equal(path,'/checkpoint-native');assert.deepEqual({...options},{method:'POST'});assert.equal(timeoutMS,1200000);return {json:async()=>report};});
  const saved=await checkpoint();assert.equal(saved.size,128*1024*1024);assert.equal(saved.sha256,report.sha256);assert.equal(saved.lastBackup,report.createdAt);
  assert.equal(state.lastBackup,report.createdAt);assert.equal(state.failure,null);assert.equal(state.checkpointing,false);
 });
@@ -29,4 +29,10 @@ test('runtime refuses overlapping checkpoints and permits the accepted native op
  let complete;const gate=new Promise(resolve=>complete=resolve);
  const {state,checkpoint}=setup(async()=>{await gate;return {json:async()=>report};});
  const pending=checkpoint();await assert.rejects(checkpoint(),/checkpoint_busy/);complete();await pending;assert.equal(state.checkpointing,false);
+});
+
+test('runtime storage transport budgets cover large native restore and checkpoint streams',async()=>{
+ assert.match(source,/async function request\(path,init,timeoutMS=240000\)\{const r=await fetch\(storage\+path,\{\.\.\.init,signal:AbortSignal\.timeout\(timeoutMS\)\}\);/);
+ assert.match(source,/const r=await request\('\/backup',undefined,900000\);/);
+ assert.match(source,/request\('\/checkpoint-native',\{method:'POST'\},1200000\)/);
 });
