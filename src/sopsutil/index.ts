@@ -11,6 +11,8 @@ const LEGACY_ORIGIN='https://sopsutil-openclaw-dev.twe-technology-solutions.work
 // 2026-11-18, ~3 minutes end to end). Keep a generous bound so routine and
 // maintenance checkpoints do not fail merely because the archive grew.
 const CHECKPOINT_CREATE_TIMEOUT_MS=900000;
+// Real full-state archives are hundreds of MB; never publish a near-empty one.
+const MIN_CHECKPOINT_BYTES=1024*1024;
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
  requiredPorts=[18789,18790,3978];
@@ -66,9 +68,15 @@ export class SopsutilContainer extends Container<Env>{
  }
  async checkpointArchive(preserve=true):Promise<{ok:boolean;key:string;size:number;sha256:string;createdAt:string}>{
   if(!this.ctx.container?.running)throw new Error('checkpoint_requires_running');
+  // A running container may still be restoring state during bootstrap; archiving then
+  // captures an empty state directory (observed 2026-11-19: 581 bytes). The runtime
+  // status server listens only after restore, migrations and validation complete.
+  const ready=await this.ctx.container.getTcpPort(18790).fetch('http://localhost/status').catch(()=>null);
+  if(!ready?.ok)throw new Error('checkpoint_requires_ready_runtime');
+  await ready.body?.cancel();
   const process=await this.#nativeExec(['node','--input-type=module','-e',`import{spawn}from'node:child_process';import{stat,mkdir,rename}from'node:fs/promises';import{createReadStream}from'node:fs';import{createHash,randomUUID}from'node:crypto';const directory='/home/node/checkpoints';const existing=await stat(directory).catch(e=>{if(e.code!=='ENOENT')throw e;return null;});if(existing&&!existing.isDirectory()){if(!existing.isFile())throw Error('checkpoint_path_not_regular');await rename(directory,'/home/node/checkpoints-preserved-'+randomUUID()+'.tar.gz');}await mkdir(directory,{recursive:true,mode:0o700});const archive=directory+'/full-'+randomUUID()+'.tar.gz';const child=spawn('node',['/app/openclaw.mjs','backup','create','--output',archive,'--verify','--json'],{stdio:['ignore','pipe','pipe']});let errors='';child.stderr.on('data',b=>errors=(errors+b).slice(-2000));const closed=new Promise(r=>child.on('close',r));let data='';for await(const b of child.stdout)data+=b;const code=await closed;if(code!==0){for(const [key,secret]of Object.entries(process.env))if(secret&&/PASSWORD|TOKEN|SECRET|API_KEY|PRIVATE_KEY|CERTIFICATE|CREDENTIAL/i.test(key))errors=errors.split(secret).join('[redacted]');errors=errors.replace(/https?:[^ ]+/g,'[url]').replace(/[A-Za-z0-9_+=/-]{30,}/g,'[opaque]');console.log(JSON.stringify({error:'native_backup_cli_failed',code,stderr:errors}));process.exit(0);}const b=JSON.parse(data);if(!b.verified||b.dryRun||b.onlyConfig||b.includeWorkspace!==true||!b.assets?.some(a=>a.kind==='state'&&a.sourcePath==='/home/node/.openclaw')||!b.archivePath?.startsWith('/home/node/checkpoints/'))throw Error('full_verified_backup_required');const size=(await stat(b.archivePath)).size;const h=createHash('sha256');for await(const data of createReadStream(b.archivePath))h.update(data);console.log(JSON.stringify({archivePath:b.archivePath,size,sha256:h.digest('hex'),createdAt:b.createdAt,verified:true}));`],CHECKPOINT_CREATE_TIMEOUT_MS);
   const out=await process.output();if(out.exitCode!==0)throw new Error('native_checkpoint_failed');
-  const report=JSON.parse(new TextDecoder().decode(out.stdout));if(report.error)throw new Error(JSON.stringify(report));if(!report.size||report.size>2*1024*1024*1024)throw new Error('checkpoint_size_invalid');
+  const report=JSON.parse(new TextDecoder().decode(out.stdout));if(report.error)throw new Error(JSON.stringify(report));if(!report.size||report.size<MIN_CHECKPOINT_BYTES||report.size>2*1024*1024*1024)throw new Error('checkpoint_size_invalid');
   const key=preserve?'backups/verified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.tar.gz':'backups/latest.tar.gz';
   for(const destination of preserve?[key,'backups/latest.tar.gz']:[key]){
    const copy=await this.#nativeExec(['cat',report.archivePath]);
