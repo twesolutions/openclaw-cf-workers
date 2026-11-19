@@ -6,10 +6,12 @@ import vm from 'node:vm';
 
 const source=await readFile('src/sopsutil/runtime.mjs','utf8');
 const teamsVersion=source.match(/const teamsVersion='([^']+)'/)?.[1];
-assert.equal(teamsVersion,'2026.11.1');
+assert.equal(teamsVersion,'2026.11.5');
+const teamsIntegrity=source.match(/const teamsIntegrity='([^']+)'/)?.[1];
+assert.equal(teamsIntegrity,'sha512-jDPxKnSKMFm5rtYyOVB6zfzYmTI5ZH35iaq/Sos1adEDM3IGWvXp5VIsfPEV93pUkEviIg6asOv93bDsvl/gpw==');
 const teamsMigrationPath='/state/.bootstrap/teams-pre-migration-'+teamsVersion+'.json';
 const migrationReceiptPath='/state/.bootstrap/native-migration-complete.json';
-const completedReceipt={format:1,openclawVersion:'2026.11.1',teamsVersion};
+const completedReceipt={format:1,openclawVersion:'2026.11.5',teamsVersion};
 const names=['migrateCore','installTeamsPlugin','main'];
 const functions=names.map(name=>{
  const fn=source.match(new RegExp('async function '+name+'\\(\\)\\{[\\s\\S]*?\\n\\}'))?.[0];
@@ -21,15 +23,15 @@ const initial={
  plugins:{entries:{msteams:{enabled:true,customPreserved:'plugin'},other:{enabled:false}}},
  agents:{defaults:{workspace:'/state/workspace-sopsutil'},entries:{sopsutil:{name:'Existing agent'}}},
 };
-function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1',runtimeVersion='2026.11.1',marker=false,dependenciesInstalled=true,routeChanged=false,receipt,validateFailure=false,fresh=false}={}){
+function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.5',integrity=teamsIntegrity,source:installSource='npm',runtimeVersion='2026.11.5',marker=false,dependenciesInstalled=true,routeChanged=false,receipt,validateFailure=false,fresh=false}={}){
  const events=[];let doctors=0;
  const files=new Map([['/state/openclaw.json',JSON.stringify(config)],['/app/package.json',JSON.stringify({version:runtimeVersion})]]);
  if(fresh)files.delete('/state/openclaw.json');
- if(marker)files.set('/state/.bootstrap/msteams-native-install-2026.11.1','official npm install\n');
+ if(marker)files.set('/state/.bootstrap/msteams-native-install-2026.11.5','official npm install\n');
  if(receipt!==undefined)files.set(migrationReceiptPath,typeof receipt==='string'?receipt:JSON.stringify(receipt));
  const env={PUBLIC_ORIGIN:'https://sopsbot.tweai.dev',npm_config_offline:'true'};
  const context={
-  root:'/state',cli:'/app/openclaw.mjs',teamsVersion,teamsMigrationPath,migrationReceiptPath,TWE_MEMBER_OBJECT_IDS:['fixture-member'],join,resolve,
+  root:'/state',cli:'/app/openclaw.mjs',teamsVersion,teamsIntegrity,teamsMigrationPath,migrationReceiptPath,TWE_MEMBER_OBJECT_IDS:['fixture-member'],join,resolve,
   process:{env,on:()=>{}},console:{log:()=>{}},
   readFile:async path=>{if(!files.has(path))throw Object.assign(new Error('missing'),{code:'ENOENT'});return files.get(path);},
   writeFile:async(path,value,options)=>{assert.equal(options.mode,0o600);events.push(['write',path]);files.set(path,value);},
@@ -54,7 +56,7 @@ function fixture({config=initial,doctorFailure=0,trusted=true,version='2026.11.1
     if(routeChanged){const c=JSON.parse(files.get('/state/openclaw.json'));c.channels.msteams.legacyWebhook.port=9999;files.set('/state/openclaw.json',JSON.stringify(c));}
    }
    if(args[0]==='plugins'&&args[1]==='install')dependenciesInstalled=true;
-   if(args[0]==='plugins'&&args[1]==='inspect')return JSON.stringify({install:{source:'npm',version},plugin:{trustedOfficialInstall:trusted,dependencyStatus:{requiredInstalled:dependenciesInstalled}}});
+   if(args[0]==='plugins'&&args[1]==='inspect')return JSON.stringify({install:{source:installSource,version,integrity},plugin:{trustedOfficialInstall:trusted,dependencyStatus:{requiredInstalled:dependenciesInstalled}}});
    return '';
   },
  };
@@ -66,7 +68,7 @@ test('restored older state migrates without loading old Teams, then enabled-plug
  const steps=f.events.filter(e=>e[0]==='cli'||e[0]==='spawn').map(e=>e.slice(1).join(' '));
  assert.deepEqual(steps,[
   'doctor --fix --non-interactive',
-  'plugins install @openclaw/msteams@2026.11.1 --force --accept-capabilities',
+  'plugins install npm:@openclaw/msteams@2026.11.5 --force --accept-capabilities',
   'plugins inspect msteams --json',
   'doctor --fix --non-interactive','config validate',
   '/app/openclaw.mjs gateway --bind lan --port 18789',
@@ -78,7 +80,7 @@ test('restored older state migrates without loading old Teams, then enabled-plug
  assert.equal(saved.agents.defaults.model.primary,'cloudflare/openai/gpt-6.1-sol');
  assert.equal(saved.gateway.auth.password.source,'env');assert.equal(saved.gateway.auth.password.id,'OPENCLAW_GATEWAY_PASSWORD');
  assert.equal(saved.channels.msteams.authType,'federated');assert.equal(saved.channels.msteams.groupPolicy,'disabled');
- assert.ok(f.files.has('/state/.bootstrap/msteams-native-install-2026.11.1'));
+ assert.ok(f.files.has('/state/.bootstrap/msteams-native-install-2026.11.5'));
  assert.equal(f.files.has(teamsMigrationPath),false);
  assert.deepEqual(JSON.parse(f.files.get(migrationReceiptPath)),completedReceipt);
  assert.ok(f.events.findIndex(e=>e[0]==='write'&&e[1]===migrationReceiptPath)>f.events.findIndex(e=>e[0]==='cli'&&e[1]==='config'&&e[2]==='validate'));
@@ -96,9 +98,9 @@ test('an enabled-plugin migration refusal prevents serving or Gateway startup',a
  assert.equal(f.files.has(migrationReceiptPath),false);
 });
 test('untrusted or mismatched plugin install cannot receive a successful bootstrap marker',async()=>{
- for(const options of [{trusted:false},{version:'2026.9.3'}]){
+ for(const options of [{trusted:false},{version:'2026.11.1'},{integrity:'sha512-other'},{source:'clawhub'}]){
   const f=fixture(options);await assert.rejects(f.api.main(),/msteams_native_provenance_missing/);
-  assert.equal(f.files.has('/state/.bootstrap/msteams-native-install-2026.11.1'),false);
+  assert.equal(f.files.has('/state/.bootstrap/msteams-native-install-2026.11.5'),false);
   assert.equal(f.events.some(e=>e[0]==='spawn'),false);
  }
 });

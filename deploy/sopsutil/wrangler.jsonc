@@ -8,7 +8,7 @@
  "preview_urls":false,
  "routes":[{"pattern":"sopsbot.tweai.dev","custom_domain":true}],
  "rules":[{"type":"Text","globs":["**/runtime.mjs"],"fallthrough":true}],
- "containers":[{"class_name":"SopsutilContainer","image":"docker.io/openclaw/openclaw@sha256:c504dec53e7f7ad588624e782db1643e1971410a23c99ccbdbb2e0c7a79324cf","max_instances":1,"instance_type":"standard-2","ssh":{"enabled":true}}],
+ "containers":[{"class_name":"SopsutilContainer","image":"docker.io/openclaw/openclaw@sha256:97781490d6cd01cec8d1f0ad300ff8bedfaae18ec5b8c30666aaebc470a6309f","max_instances":1,"instance_type":"standard-2","ssh":{"enabled":true}}],
  "durable_objects":{"bindings":[{"name":"SOPSUTIL_CONTAINER","class_name":"SopsutilContainer"}]},
  "migrations":[{"tag":"sopsutil-v1","new_sqlite_classes":["SopsutilContainer"]}],
  "r2_buckets":[{"binding":"SOPSUTIL_DATA","bucket_name":"sopsutil-openclaw-dev-data"}],
