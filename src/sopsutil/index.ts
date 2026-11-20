@@ -4,6 +4,8 @@ import neuronCutover from './neuron-cutover.mjs';
 import nativePicker from './native-picker.mjs';
 import modelConfig from '../../deploy/sopsutil/models.json';
 import {hasApplicationAccess} from './access';
+import {isBusinessHours} from './business-hours';
+import {isBrowserNavigation,startingPage} from './starting-page';
 export {ContainerProxy};
 interface Env {SOPSUTIL_CONTAINER:DurableObjectNamespace<SopsutilContainer>;SOPSUTIL_DATA:R2Bucket;PUBLIC_ORIGIN:string;SOPSUTIL_ACCESS_AUD?:string;SOPSUTIL_CF_GATEWAY_PASSWORD?:string;SOPSUTIL_CF_AI_TOKEN?:string;SOPSUTIL_TEAMS_CERTIFICATE_B64?:string;}
 const LEGACY_ORIGIN='https://sopsutil-openclaw-dev.twe-technology-solutions.workers.dev';
@@ -13,6 +15,7 @@ const LEGACY_ORIGIN='https://sopsutil-openclaw-dev.twe-technology-solutions.work
 const CHECKPOINT_CREATE_TIMEOUT_MS=900000;
 // Real full-state archives are hundreds of MB; never publish a near-empty one.
 const MIN_CHECKPOINT_BYTES=1024*1024;
+const redact=(text:string,secret?:string)=>(secret?text.split(secret).join('[redacted]'):text).slice(0,1000);
 export class SopsutilContainer extends Container<Env>{
  defaultPort=18789;
  requiredPorts=[18789,18790,3978];
@@ -26,6 +29,49 @@ export class SopsutilContainer extends Container<Env>{
   const checkpoint=await this.containerFetch('http://localhost/checkpoint',{method:'POST'},18790);
   if(!checkpoint.ok)throw new Error('checkpoint_required_before_sleep');
   await this.stop('SIGTERM');
+ }
+ #wakeInFlight?:Promise<void>;
+ // Single-flight normal start shared by the business-hours cron and the browser
+ // starting page. Never starts while public starts are paused, never overrides the
+ // entrypoint/environment, and returns once the start is issued; Gateway readiness
+ // (restore/migration) follows inside the container.
+ #wake():Promise<void>{
+  this.#wakeInFlight??=(async()=>{
+   if(await this.maintenancePaused())throw new Error('maintenance_paused');
+   if(this.ctx.container?.running)return;
+   try{await this.start(undefined,{portToCheck:this.defaultPort,retries:Math.ceil(60000/300),waitInterval:300});}
+   catch(error){
+    await this.env.SOPSUTIL_DATA.put('diagnostics/startup.json',JSON.stringify({at:new Date().toISOString(),source:'wake',message:redact(error instanceof Error?error.message:'',this.env.SOPSUTIL_CF_GATEWAY_PASSWORD)})).catch(()=>{});
+    throw error;
+   }
+  })().finally(()=>{this.#wakeInFlight=undefined;});
+  return this.#wakeInFlight;
+ }
+ async #requiredPortsAnswer():Promise<boolean>{
+  const container=this.ctx.container;if(!container?.running)return false;
+  for(const port of this.requiredPorts){
+   try{const r=await container.getTcpPort(port).fetch('http://'+this.pingEndpoint,{signal:AbortSignal.timeout(2000)});await r.body?.cancel();}catch{return false;}
+  }
+  return true;
+ }
+ // Business-hours cron (account-internal; never routed publicly). Renews the idle
+ // timer of a running container, or warm-starts a stopped one. Respects the
+ // maintenance gate. Outside business hours the Worker never calls this.
+ async keepAwake():Promise<{action:'paused'|'renewed'|'starting'|'started'}>{
+  if(await this.maintenancePaused())return {action:'paused'};
+  if(this.#wakeInFlight){await this.#wakeInFlight;return {action:'starting'};}
+  if(this.ctx.container?.running){this.renewActivityTimeout();return {action:'renewed'};}
+  await this.#wake();return {action:'started'};
+ }
+ // Browser navigation readiness: 'ready' only when every required port answers.
+ // A stopped container is started (single-flight) and the caller shows the page.
+ async browserStartup():Promise<'paused'|'ready'|'starting'>{
+  if(await this.maintenancePaused())return 'paused';
+  if(this.ctx.container?.running&&!this.#wakeInFlight)return await this.#requiredPortsAnswer()?'ready':'starting';
+  const wake=this.#wake().catch(()=>{});
+  let timer:ReturnType<typeof setTimeout>|null=null;
+  await Promise.race([wake,new Promise(resolve=>{timer=setTimeout(resolve,8000);})]);clearTimeout(timer);
+  return 'starting';
  }
  async diagnostics(){const r=await this.containerFetch('http://localhost/status',{},18790);return r.json();}
  async modelEnvironment(){return {containerRunning:this.ctx.container?.running??false,workerSecretPresent:!!this.env.SOPSUTIL_CF_AI_TOKEN,runtimeSecretPresent:!!this.envVars.CLOUDFLARE_AI_API_TOKEN,environmentNames:Object.keys(this.envVars)};}
@@ -120,7 +166,16 @@ SopsutilContainer.outboundByHost={
   return new Response('Forbidden',{status:403});
  }
 };
-export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {access?:{aud:string}}):Promise<Response>{
+export default {async scheduled(controller:ScheduledController,env:Env):Promise<void>{
+ // Approved 2026-11-20: stay awake Mon-Fri 07:00-18:00 Pacific. Outside that
+ // window do nothing at all, so the normal 15-minute idle sleep resumes.
+ if(!isBusinessHours(controller.scheduledTime)||!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return;
+ const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
+ let result:{action:string;error?:string};
+ try{result=await container.keepAwake();}catch(error){result={action:'failed',error:redact(error instanceof Error?error.message:'',env.SOPSUTIL_CF_GATEWAY_PASSWORD)};}
+ await env.SOPSUTIL_DATA.put('diagnostics/keep-awake.json',JSON.stringify({at:new Date().toISOString(),scheduledTime:new Date(controller.scheduledTime).toISOString(),cron:controller.cron,...result}));
+},
+async fetch(request:Request,env:Env,ctx:ExecutionContext & {access?:{aud:string}}):Promise<Response>{
  const url=new URL(request.url);
  // Only the canonical hostname and the original signed Teams callback exist.
  // Preview URLs and alternate hostnames must never bypass hostname Access.
@@ -148,6 +203,11 @@ export default {async fetch(request:Request,env:Env,ctx:ExecutionContext & {acce
  if(!env.SOPSUTIL_CF_GATEWAY_PASSWORD)return new Response('Secure bootstrap pending',{status:503,headers:{'Cache-Control':'no-store'}});
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
+ if(!isTeamsWebhook&&isBrowserNavigation(request)){
+  const startup=await container.browserStartup();
+  if(startup==='paused')return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
+  if(startup==='starting')return startingPage();
+ }
  try{
   try{await container.startAndWaitForPorts({cancellationOptions:{portReadyTimeoutMS:900000,instanceGetTimeoutMS:60000}});}catch(first){
    if(!/not running/i.test(first instanceof Error?first.message:''))throw first;
