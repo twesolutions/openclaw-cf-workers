@@ -204,7 +204,9 @@ async fetch(request:Request,env:Env,ctx:ExecutionContext & {access?:{aud:string}
  const container=getContainer(env.SOPSUTIL_CONTAINER,'sopsutil-development');
  if(await container.maintenancePaused())return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
  if(!isTeamsWebhook&&isBrowserNavigation(request)){
-  const startup=await container.browserStartup();
+  // A Durable Object still on older code (gradual code update) lacks this RPC;
+  // fall back to the original wait-for-ready path rather than failing the page.
+  const startup=await container.browserStartup().catch(()=>'unknown' as const);
   if(startup==='paused')return Response.json({ok:false,error:'upgrade_in_progress'},{status:503,headers:{'Cache-Control':'no-store'}});
   if(startup==='starting')return startingPage();
  }

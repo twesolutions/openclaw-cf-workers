@@ -172,6 +172,11 @@ test('a ready container serves browser navigations normally',async()=>{
  const r=await visit('/',{headers:nav},access,{startup:'ready'});assert.equal(r.status,200);assert.equal(await r.text(),'gateway');
  assert.equal(globalThis.__calls.startAndWaitForPorts,1);assert.equal(globalThis.__calls.forwards,1);
 });
+test('a Durable Object without the readiness RPC falls back to the original wait-for-ready path',async()=>{
+ globalThis.__calls={getContainer:0,startAndWaitForPorts:0,forwards:0};
+ globalThis.__stub={maintenancePaused:async()=>false,browserStartup:async()=>{throw new TypeError('The RPC receiver does not implement the method "browserStartup".');},startAndWaitForPorts:async()=>{globalThis.__calls.startAndWaitForPorts++;},fetch:async()=>{globalThis.__calls.forwards++;return new Response('gateway');}};
+ const r=await worker.fetch(new Request(origin+'/',{headers:nav}),env,access);assert.equal(r.status,200);assert.equal(globalThis.__calls.startAndWaitForPorts,1);assert.equal(globalThis.__calls.forwards,1);
+});
 test('API, asset, WebSocket, iframe and write requests never get the starting page',async()=>{
  for(const init of [
   {headers:{Accept:'application/json'}},
